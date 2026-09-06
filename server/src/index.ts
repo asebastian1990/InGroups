@@ -38,7 +38,7 @@ async function start() {
     res.json({ ok: true, database: 'neon' });
   });
 
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`InGroups server running on port ${PORT}`);
   });
 }

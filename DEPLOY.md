@@ -14,13 +14,13 @@ Single-server deploy first: **Railway** hosts the Node game server; **Cloudflare
 
 ### 2. Set root directory
 
-Railway must build from the `server` folder, not the repo root:
+The server imports code from the repo-level `shared/` folder, so Railway must deploy the **whole repo**, not just `server/`:
 
 1. Click the service → **Settings**
-2. **Root Directory** → `server`
+2. **Root Directory** → leave **empty** (or `/`)
 3. Save
 
-Railway will run `npm ci` and `npm start` (see `server/railway.toml`).
+Railway will install server dependencies and run `npm start` (see root `railway.toml`).
 
 ### 3. Environment variables
 

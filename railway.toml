@@ -1,3 +1,6 @@
+[build]
+buildCommand = "npm ci --prefix server --omit=dev"
+
 [deploy]
 startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
