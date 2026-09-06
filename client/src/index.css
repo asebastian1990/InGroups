@@ -73,20 +73,52 @@ body {
   padding-top: 32px;
 }
 
+.auth-clerk {
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-reset-link {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--brand-teal);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.auth-reset-link:hover {
+  text-decoration: underline;
+}
+
 .guest-auth {
   width: 100%;
   max-width: 400px;
-  margin-top: 24px;
-  padding-top: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--gray-200);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
-.guest-btn {
-  width: 100%;
+.guest-link {
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.guest-link:hover {
+  color: var(--dark);
+  text-decoration: underline;
 }
 
 .guest-note {
