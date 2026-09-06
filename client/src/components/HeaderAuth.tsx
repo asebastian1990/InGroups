@@ -9,7 +9,7 @@ export function HeaderAuth() {
         className="sign-in-btn"
         onClick={() => {
           exitGuestMode();
-          window.location.reload();
+          window.location.href = '/sign-in';
         }}
       >
         Sign in
@@ -17,5 +17,5 @@ export function HeaderAuth() {
     );
   }
 
-  return <UserButton afterSignOutUrl="/" />;
+  return <UserButton afterSignOutUrl="/sign-in" />;
 }

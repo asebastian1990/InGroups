@@ -10,15 +10,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { configureAuth, configureGuestAuth, isGuestMode, resetAuth } from './api';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-/** Clerk OAuth must use absolute app URLs — relative "/" sends failures to Account Portal. */
-function getAppUrls() {
-  const origin = window.location.origin;
-  return {
-    root: `${origin}/`,
-    origin,
-  };
-}
+const SIGN_IN_PATH = '/sign-in';
+const APP_HOME = '/';
 
 const signInAppearance = {
   elements: {
@@ -30,7 +23,7 @@ const signInAppearance = {
 
 function LoadingScreen() {
   return (
-    <div className="app">
+    <div className="app app--auth">
       <main className="app-content auth-screen">
         <p className="muted">Loading…</p>
       </main>
@@ -38,20 +31,41 @@ function LoadingScreen() {
   );
 }
 
-function isOAuthCallback(): boolean {
-  return window.location.hash.includes('sso-callback');
+function isSsoCallbackPath(): boolean {
+  return window.location.pathname.includes('/sso-callback');
 }
 
-function isStuckAuthRoute(): boolean {
-  const hash = window.location.hash;
-  if (!hash || hash === '#/' || hash === '#') return false;
-  if (isOAuthCallback()) return false;
-  return hash.startsWith('#/');
+function isSignInPath(): boolean {
+  return window.location.pathname.startsWith(SIGN_IN_PATH);
 }
 
-function resetAuthScreen() {
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-  window.location.reload();
+function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+  return (
+    <div className="app app--auth">
+      <main className="app-content auth-screen">
+        <div className="auth-clerk">
+          <SignIn
+            routing="path"
+            path={SIGN_IN_PATH}
+            oauthFlow="redirect"
+            appearance={signInAppearance}
+            signInUrl={SIGN_IN_PATH}
+            signUpUrl={SIGN_IN_PATH}
+            fallbackRedirectUrl={APP_HOME}
+            signUpFallbackRedirectUrl={APP_HOME}
+          />
+        </div>
+        <div className="guest-auth">
+          <button type="button" className="guest-link" onClick={onContinueAsGuest}>
+            Continue as Guest
+          </button>
+          <p className="guest-note">
+            Play free word sets only. Sign in for licenses and custom word sets.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
@@ -71,9 +85,18 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [guestActive, isLoaded, isSignedIn, getToken]);
 
+  useEffect(() => {
+    if (guestActive || !isLoaded || isSignedIn) return;
+    if (isSignInPath() || isSsoCallbackPath()) return;
+    window.location.replace(SIGN_IN_PATH);
+  }, [guestActive, isLoaded, isSignedIn]);
+
   const continueAsGuest = () => {
     configureGuestAuth();
     setGuestActive(true);
+    if (isSignInPath()) {
+      window.history.replaceState(null, '', APP_HOME);
+    }
   };
 
   if (guestActive) {
@@ -82,51 +105,29 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   if (!isLoaded) return <LoadingScreen />;
 
-  const { root: appRoot } = getAppUrls();
-
-  if (isOAuthCallback()) {
+  if (isSsoCallbackPath()) {
     return (
       <div className="app app--auth">
         <main className="app-content auth-screen">
           <AuthenticateWithRedirectCallback
-            signInFallbackRedirectUrl={appRoot}
-            signUpFallbackRedirectUrl={appRoot}
+            signInUrl={SIGN_IN_PATH}
+            signUpUrl={SIGN_IN_PATH}
+            signInFallbackRedirectUrl={APP_HOME}
+            signUpFallbackRedirectUrl={APP_HOME}
           />
         </main>
       </div>
     );
   }
 
+  if (!isSignInPath()) {
+    return <LoadingScreen />;
+  }
+
   return (
     <>
       <SignedOut>
-        <div className="app app--auth">
-          <main className="app-content auth-screen">
-            <div className="auth-clerk">
-              <SignIn
-                routing="hash"
-                oauthFlow="redirect"
-                appearance={signInAppearance}
-                fallbackRedirectUrl={appRoot}
-                signUpUrl={appRoot}
-                signUpFallbackRedirectUrl={appRoot}
-              />
-            </div>
-            {isStuckAuthRoute() && (
-              <button type="button" className="auth-reset-link" onClick={resetAuthScreen}>
-                ← Back to sign in
-              </button>
-            )}
-            <div className="guest-auth">
-              <button type="button" className="guest-link" onClick={continueAsGuest}>
-                Continue as Guest
-              </button>
-              <p className="guest-note">
-                Play free word sets only. Sign in for licenses and custom word sets.
-              </p>
-            </div>
-          </main>
-        </div>
+        <SignInScreen onContinueAsGuest={continueAsGuest} />
       </SignedOut>
       <SignedIn>{children}</SignedIn>
     </>
@@ -144,16 +145,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
     );
   }
 
-  const { root: appRoot, origin: appOrigin } = getAppUrls();
+  const appOrigin = window.location.origin;
 
   return (
     <ClerkProvider
       publishableKey={publishableKey}
-      signInUrl={appRoot}
-      signUpUrl={appRoot}
-      signInFallbackRedirectUrl={appRoot}
-      signUpFallbackRedirectUrl={appRoot}
-      afterSignOutUrl={appRoot}
+      signInUrl={SIGN_IN_PATH}
+      signUpUrl={SIGN_IN_PATH}
+      signInFallbackRedirectUrl={APP_HOME}
+      signUpFallbackRedirectUrl={APP_HOME}
+      afterSignOutUrl={SIGN_IN_PATH}
       allowedRedirectOrigins={[appOrigin]}
     >
       <AuthGate>{children}</AuthGate>
