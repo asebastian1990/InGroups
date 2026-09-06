@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.db
+_extract/
+.env
+.DS_Store
+shared/*.js
