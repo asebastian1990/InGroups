@@ -20,6 +20,9 @@ let restorePromise: Promise<{ playerId: string; room: ClientRoomState } | null> 
 
 let getTokenFn: (() => Promise<string | null>) | null = null;
 
+const GUEST_FLAG = 'ingroups_guest';
+const GUEST_ID_KEY = 'ingroups_guest_id';
+
 const roomUpdateListeners = new Set<(room: ClientRoomState) => void>();
 const gameClosedListeners = new Set<(data: { reason: string }) => void>();
 const chatUpdateListeners = new Set<(messages: ChatMessage[]) => void>();
@@ -51,9 +54,59 @@ function resetSocketEvents() {
 
 
 
+export function isGuestMode(): boolean {
+  return localStorage.getItem(GUEST_FLAG) === '1';
+}
+
+function getGuestId(): string {
+  let id = localStorage.getItem(GUEST_ID_KEY);
+  if (!id || !id.startsWith('guest_')) {
+    id = `guest_${crypto.randomUUID()}`;
+    localStorage.setItem(GUEST_ID_KEY, id);
+  }
+  return id;
+}
+
+export function enableGuestMode(): void {
+  getGuestId();
+  localStorage.setItem(GUEST_FLAG, '1');
+}
+
+export function clearGuestMode(): void {
+  localStorage.removeItem(GUEST_FLAG);
+}
+
+export function exitGuestMode(): void {
+  clearGuestMode();
+  resetAuth();
+}
+
+
+
 export function configureAuth(getToken: () => Promise<string | null>) {
 
+  clearGuestMode();
   getTokenFn = getToken;
+
+  if (socket) {
+
+    socket.disconnect();
+
+    socket = null;
+
+  }
+
+  resetSocketEvents();
+
+}
+
+
+
+export function configureGuestAuth(): void {
+
+  getTokenFn = null;
+
+  enableGuestMode();
 
   if (socket) {
 
@@ -87,7 +140,13 @@ export function resetAuth() {
 
 
 
-async function authPayload(): Promise<{ token: string }> {
+async function authPayload(): Promise<{ token?: string; guestId?: string }> {
+
+  if (isGuestMode()) {
+
+    return { guestId: getGuestId() };
+
+  }
 
   if (!getTokenFn) {
 

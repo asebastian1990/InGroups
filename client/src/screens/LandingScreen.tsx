@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Logo } from '../components/Logo';
-import { createRoom, joinRoom, getLicense } from '../api';
+import { createRoom, joinRoom, isGuestMode } from '../api';
 import type { ClientRoomState } from '@shared/types';
 
 interface Props {
@@ -14,11 +14,7 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [hasLicense, setHasLicense] = useState(false);
-
-  useEffect(() => {
-    getLicense().then((l) => setHasLicense(!!l)).catch(() => {});
-  }, []);
+  const guest = isGuestMode();
 
   const handleCreate = async () => {
     if (!name.trim() || creating || joining) return;
@@ -56,17 +52,6 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
       <h1>InGroups</h1>
       <p>Align with your group on a secret word—without giving it away!</p>
 
-      <div className="landing-menu">
-        <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
-          <span>Create Word Set</span>
-          <span className="menu-item-arrow">{hasLicense ? '›' : '🔒'}</span>
-        </div>
-        <div className="menu-item" onClick={() => onNavigate('license')}>
-          <span>License Key</span>
-          <span className="menu-item-arrow">{hasLicense ? '✓' : '›'}</span>
-        </div>
-      </div>
-
       <div className="landing-form">
         <label className="input-label">Your Name</label>
         <input
@@ -76,11 +61,13 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
           placeholder="Enter your name"
           autoFocus
         />
+
+        <div className="landing-section-divider" aria-hidden="true" />
+
         <button className="btn btn-primary" onClick={handleCreate} disabled={creating || joining || !name.trim()}>
           {creating ? 'Creating…' : 'Host New Game'}
         </button>
-        <div className="landing-divider">or join</div>
-        <label className="input-label">Room Code</label>
+        <div className="landing-divider">or join with room code</div>
         <input
           className="input"
           value={roomCode}
@@ -93,6 +80,19 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
         </button>
         {error && <p className="error-msg">{error}</p>}
       </div>
+
+      {!guest && (
+        <div className="landing-menu">
+          <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
+            <span>Create Word Set</span>
+            <span className="menu-item-arrow">›</span>
+          </div>
+          <div className="menu-item" onClick={() => onNavigate('license')}>
+            <span>License Key</span>
+            <span className="menu-item-arrow">›</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

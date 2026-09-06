@@ -6,8 +6,8 @@ import {
   SignedOut,
   useAuth,
 } from '@clerk/clerk-react';
-import { useEffect, type ReactNode } from 'react';
-import { configureAuth, resetAuth } from './api';
+import { useEffect, useState, type ReactNode } from 'react';
+import { configureAuth, configureGuestAuth, isGuestMode, resetAuth } from './api';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -25,23 +25,31 @@ function isOAuthCallback(): boolean {
   return window.location.hash.includes('sso-callback');
 }
 
-function AuthTokenBridge({ children }: { children: ReactNode }) {
+function AuthGate({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
+  const [guestActive, setGuestActive] = useState(() => isGuestMode());
 
   useEffect(() => {
+    if (guestActive) {
+      configureGuestAuth();
+      return;
+    }
     if (!isLoaded) return;
     if (isSignedIn) {
       configureAuth(() => getToken());
     } else {
       resetAuth();
     }
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [guestActive, isLoaded, isSignedIn, getToken]);
 
-  return <>{children}</>;
-}
+  const continueAsGuest = () => {
+    configureGuestAuth();
+    setGuestActive(true);
+  };
 
-function AuthGate({ children }: { children: ReactNode }) {
-  const { isLoaded } = useAuth();
+  if (guestActive) {
+    return <>{children}</>;
+  }
 
   if (!isLoaded) return <LoadingScreen />;
 
@@ -61,6 +69,14 @@ function AuthGate({ children }: { children: ReactNode }) {
         <div className="app">
           <main className="app-content auth-screen">
             <SignIn routing="hash" />
+            <div className="guest-auth">
+              <button type="button" className="btn guest-btn" onClick={continueAsGuest}>
+                Continue as Guest
+              </button>
+              <p className="guest-note">
+                Play free word sets only. Sign in for licenses and custom word sets.
+              </p>
+            </div>
           </main>
         </div>
       </SignedOut>
@@ -82,9 +98,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <ClerkProvider publishableKey={publishableKey}>
-      <AuthTokenBridge>
-        <AuthGate>{children}</AuthGate>
-      </AuthTokenBridge>
+      <AuthGate>{children}</AuthGate>
     </ClerkProvider>
   );
 }

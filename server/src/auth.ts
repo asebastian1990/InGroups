@@ -9,13 +9,25 @@ if (!secretKey) {
 
 const clerk = secretKey ? createClerkClient({ secretKey }) : null;
 
+const GUEST_ID_PATTERN =
+  /^guest_[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export interface AuthContext {
-  clerkUserId: string;
-  userId: string;
+  playerId: string;
+  userId: string | null;
+  isGuest: boolean;
 }
 
-export async function authenticateToken(token: string | undefined): Promise<AuthContext | null> {
-  if (!token || !secretKey) return null;
+export function isValidGuestId(id: string): boolean {
+  return GUEST_ID_PATTERN.test(id);
+}
+
+export function guestsAllowed(): boolean {
+  return process.env.ALLOW_GUEST !== 'false';
+}
+
+async function authenticateClerkToken(token: string): Promise<{ clerkUserId: string; userId: string } | null> {
+  if (!secretKey) return null;
   try {
     const payload = await verifyToken(token, { secretKey });
     const clerkUserId = payload.sub;
@@ -37,10 +49,33 @@ export async function authenticateToken(token: string | undefined): Promise<Auth
   }
 }
 
+export async function authenticateConnection(handshakeAuth: {
+  token?: string;
+  guestId?: string;
+}): Promise<AuthContext | null> {
+  if (handshakeAuth.token) {
+    const clerk = await authenticateClerkToken(handshakeAuth.token);
+    if (clerk) {
+      return { playerId: clerk.clerkUserId, userId: clerk.userId, isGuest: false };
+    }
+  }
+
+  const guestId = handshakeAuth.guestId?.trim();
+  if (guestId && isValidGuestId(guestId) && guestsAllowed()) {
+    return { playerId: guestId, userId: null, isGuest: true };
+  }
+
+  return null;
+}
+
 export function getSocketAuth(socket: Socket): AuthContext | null {
   return (socket.data.auth as AuthContext | undefined) ?? null;
 }
 
-export function getSocketUserId(socket: Socket): string | null {
-  return getSocketAuth(socket)?.clerkUserId ?? null;
+export function getPlayerId(socket: Socket): string | null {
+  return getSocketAuth(socket)?.playerId ?? null;
+}
+
+export function isGuestSocket(socket: Socket): boolean {
+  return getSocketAuth(socket)?.isGuest ?? false;
 }

@@ -12,7 +12,7 @@ import {
   onChatUpdate,
 } from './api';
 import { LogoMark } from './components/Logo';
-import { UserButton } from '@clerk/clerk-react';
+import { HeaderAuth } from './components/HeaderAuth';
 import { ConfirmModal } from './components/UI';
 import { LandingScreen } from './screens/LandingScreen';
 import { StartScreen } from './screens/StartScreen';
@@ -172,7 +172,7 @@ export default function App() {
             <span className="app-title">InGroups</span>
           </div>
           <div className="app-header-right">
-            <UserButton afterSignOutUrl="/" />
+            <HeaderAuth />
           </div>
         </header>
         <main className="app-content">
@@ -206,7 +206,7 @@ export default function App() {
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
             {isHost ? 'Exit Game' : 'Leave'}
           </button>
-          <UserButton afterSignOutUrl="/" />
+          <HeaderAuth />
         </div>
       </header>
 

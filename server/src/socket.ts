@@ -22,7 +22,7 @@ import {
   validateLicense,
   getPlayerLicense,
 } from './db.js';
-import { authenticateToken, getSocketUserId } from './auth.js';
+import { authenticateConnection, getPlayerId, isGuestSocket } from './auth.js';
 import type { RoomState, Player } from '../../shared/types.js';
 import { MIN_IN_GROUP_SIZE, MIN_PLAYERS } from '../../shared/types.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -190,8 +190,11 @@ function endRound(io: Server, room: RoomState) {
 
 export function setupSocketHandlers(io: Server) {
   io.use(async (socket, next) => {
-    const token = socket.handshake.auth?.token as string | undefined;
-    const auth = await authenticateToken(token);
+    const handshakeAuth = socket.handshake.auth as { token?: string; guestId?: string } | undefined;
+    const auth = await authenticateConnection({
+      token: handshakeAuth?.token,
+      guestId: handshakeAuth?.guestId,
+    });
     if (!auth) {
       next(new Error('Unauthorized'));
       return;
@@ -201,16 +204,16 @@ export function setupSocketHandlers(io: Server) {
   });
 
   io.on('connection', (socket: Socket) => {
-    const authUserId = getSocketUserId(socket);
-    if (!authUserId) {
+    const playerAuthId = getPlayerId(socket);
+    if (!playerAuthId) {
       socket.disconnect();
       return;
     }
 
-    let currentPlayerId: string | null = authUserId;
+    let currentPlayerId: string | null = playerAuthId;
 
     socket.on('createRoom', ({ name }: { name: string }, cb) => {
-      const playerId = authUserId;
+      const playerId = playerAuthId;
       currentPlayerId = playerId;
       const room = createRoom(name, playerId);
       rooms.set(room.code, room);
@@ -229,7 +232,7 @@ export function setupSocketHandlers(io: Server) {
         cb({ success: false, error: 'Game already in progress' });
         return;
       }
-      const playerId = authUserId;
+      const playerId = playerAuthId;
       currentPlayerId = playerId;
 
       const existing = room.players.find((p) => p.id === playerId);
@@ -265,7 +268,7 @@ export function setupSocketHandlers(io: Server) {
     });
 
     socket.on('rejoinRoom', ({ code, playerId }: { code: string; playerId: string }, cb) => {
-      if (playerId !== authUserId) {
+      if (playerId !== playerAuthId) {
         cb({ success: false, error: 'Not authorized' });
         return;
       }
@@ -355,7 +358,7 @@ export function setupSocketHandlers(io: Server) {
     });
 
     socket.on('sendChat', ({ text, playerId, roomCode }: { text: string; playerId: string; roomCode: string }) => {
-      if (!playerId || !roomCode || playerId !== authUserId) return;
+      if (!playerId || !roomCode || playerId !== playerAuthId) return;
 
       currentPlayerId = playerId;
       playerRooms.set(playerId, socket.id);
@@ -436,8 +439,12 @@ export function setupSocketHandlers(io: Server) {
     socket.on('getWordSets', async (_data, cb) => {
       const ack = typeof cb === 'function' ? cb : () => {};
       try {
-        const license = await getPlayerLicense(authUserId);
-        ack(await getWordSets(!!license, authUserId));
+        if (isGuestSocket(socket)) {
+          ack(await getWordSets(false));
+          return;
+        }
+        const license = await getPlayerLicense(playerAuthId);
+        ack(await getWordSets(!!license, playerAuthId));
       } catch (err) {
         console.error('getWordSets error:', err);
         ack([]);
@@ -446,7 +453,11 @@ export function setupSocketHandlers(io: Server) {
 
     socket.on('saveWordSet', async (data: { id: string; name: string; words: string[] }, cb) => {
       try {
-        const license = await getPlayerLicense(authUserId);
+        if (isGuestSocket(socket)) {
+          cb({ success: false, error: 'Sign in to create custom word sets.' });
+          return;
+        }
+        const license = await getPlayerLicense(playerAuthId);
         if (!license) {
           cb({ success: false, error: 'License required' });
           return;
@@ -455,7 +466,7 @@ export function setupSocketHandlers(io: Server) {
           cb({ success: false, error: 'Minimum 20 words required' });
           return;
         }
-        await saveCustomWordSet(data.id || uuidv4(), data.name, data.words, authUserId);
+        await saveCustomWordSet(data.id || uuidv4(), data.name, data.words, playerAuthId);
         cb({ success: true });
       } catch (err) {
         console.error('saveWordSet error:', err);
@@ -465,7 +476,11 @@ export function setupSocketHandlers(io: Server) {
 
     socket.on('deleteWordSet', async (data: { id: string }, cb) => {
       try {
-        await deleteCustomWordSet(data.id, authUserId);
+        if (isGuestSocket(socket)) {
+          cb({ success: false, error: 'Sign in to manage custom word sets.' });
+          return;
+        }
+        await deleteCustomWordSet(data.id, playerAuthId);
         cb({ success: true });
       } catch (err) {
         console.error('deleteWordSet error:', err);
@@ -475,7 +490,11 @@ export function setupSocketHandlers(io: Server) {
 
     socket.on('activateLicense', async (data: { key: string }, cb) => {
       try {
-        cb(await validateLicense(data.key, authUserId));
+        if (isGuestSocket(socket)) {
+          cb({ valid: false, error: 'Sign in to activate a license.' });
+          return;
+        }
+        cb(await validateLicense(data.key, playerAuthId));
       } catch (err) {
         console.error('activateLicense error:', err);
         cb({ valid: false, error: 'Failed to activate license' });
@@ -485,7 +504,11 @@ export function setupSocketHandlers(io: Server) {
     socket.on('getLicense', async (_data, cb) => {
       const ack = typeof cb === 'function' ? cb : () => {};
       try {
-        ack(await getPlayerLicense(authUserId));
+        if (isGuestSocket(socket)) {
+          ack(null);
+          return;
+        }
+        ack(await getPlayerLicense(playerAuthId));
       } catch (err) {
         console.error('getLicense error:', err);
         ack(null);
