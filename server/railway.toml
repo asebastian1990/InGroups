@@ -1,7 +1,3 @@
-[build]
-builder = "NIXPACKS"
-buildCommand = "npm ci"
-
 [deploy]
 startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
