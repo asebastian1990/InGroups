@@ -6,14 +6,26 @@ import cors from 'cors';
 import { initDb } from './db.js';
 import { setupSocketHandlers } from './socket.js';
 
+function parseCorsOrigins(): string[] | true {
+  const raw = process.env.CORS_ORIGIN?.trim();
+  if (!raw) return true;
+  const origins = raw.split(',').map((o) => o.trim()).filter(Boolean);
+  return origins.length > 0 ? origins : true;
+}
+
+const corsOrigins = parseCorsOrigins();
+
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
 
 const io = new Server(httpServer, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: {
+    origin: corsOrigins,
+    methods: ['GET', 'POST'],
+  },
 });
 
 const PORT = process.env.PORT || 3001;

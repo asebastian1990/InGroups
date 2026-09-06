@@ -82,11 +82,11 @@ You already use Cloudflare for DNS and Workers — the client will live on **Clo
   ✓ Agent hooked up Clerk (client sign-in + server JWT validation)
 
 □ Phase 3 — Split API from game server + deploy
-  □ Push repo to GitHub (ask agent if needed)
-  □ Railway: deploy ingroups-api + ingroups-game, set env vars
-  □ Cloudflare Pages: connect repo, configure build (see below), set env vars
-  □ Attach custom domain in Pages → your existing Cloudflare zone
-  □ Tell agent: "Split API and game server" + paste URLs
+  ✓ Push repo to GitHub
+  □ Railway: deploy game server (see DEPLOY.md Part A)
+  □ Cloudflare Pages: connect repo (see DEPLOY.md Part B)
+  □ Attach custom domain in Pages (optional)
+  □ Tell agent: "Split API and game server" when ready for two Railway services
 
 □ Phase 4 — Subscriptions (Stripe, when ready)
   □ Stripe test mode → Product + Price → copy keys
