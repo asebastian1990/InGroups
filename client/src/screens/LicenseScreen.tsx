@@ -10,21 +10,33 @@ export function LicenseScreen({ onBack }: Props) {
   const [currentLicense, setCurrentLicense] = useState<{ key: string } | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getLicense().then(setCurrentLicense).catch(() => {});
+    getLicense().then(setCurrentLicense).catch((err) => {
+      setError(err instanceof Error ? err.message : 'Failed to load license');
+    });
   }, []);
 
   const handleActivate = async () => {
+    const trimmed = key.trim();
+    if (!trimmed || loading) return;
     setError('');
     setSuccess('');
-    const result = await activateLicense(key.trim());
-    if (result.valid) {
-      setSuccess('License activated!');
-      setCurrentLicense({ key: key.trim() });
-      setKey('');
-    } else {
-      setError(result.error ?? 'Invalid license key');
+    setLoading(true);
+    try {
+      const result = await activateLicense(trimmed);
+      if (result.valid) {
+        setSuccess('License activated!');
+        setCurrentLicense({ key: trimmed });
+        setKey('');
+      } else {
+        setError(result.error ?? 'Invalid license key');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to activate license');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,16 +56,25 @@ export function LicenseScreen({ onBack }: Props) {
         </p>
       )}
 
-      <label className="input-label">Enter License Key</label>
-      <input
-        className="input"
-        value={key}
-        onChange={(e) => setKey(e.target.value)}
-        placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
-      />
-      <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={handleActivate}>
-        Activate
-      </button>
+      {!currentLicense && (
+        <>
+          <label className="input-label">Enter License Key</label>
+          <input
+            className="input"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
+          />
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: 12 }}
+            onClick={handleActivate}
+            disabled={loading || !key.trim()}
+          >
+            {loading ? 'Activating…' : 'Activate'}
+          </button>
+        </>
+      )}
 
       {error && <p className="error-msg" style={{ marginTop: 8 }}>{error}</p>}
       {success && <p style={{ color: 'var(--brand-teal)', fontSize: '0.85rem', marginTop: 8 }}>{success}</p>}

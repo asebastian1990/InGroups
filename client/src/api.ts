@@ -267,15 +267,7 @@ function emitWithAck<T>(event: string, payload?: unknown): Promise<T> {
 
           };
 
-          if (payload !== undefined) {
-
-            s.emit(event, payload, handler);
-
-          } else {
-
-            s.emit(event, handler);
-
-          }
+          s.emit(event, payload ?? null, handler);
 
         })
 

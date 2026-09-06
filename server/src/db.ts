@@ -110,6 +110,11 @@ export async function validateLicense(
     return { valid: false, error: 'Too many failed attempts. Try again tomorrow.' };
   }
 
+  const existing = await getPlayerLicense(playerId);
+  if (existing) {
+    return { valid: true };
+  }
+
   const [license] = await db.select().from(licenses).where(eq(licenses.key, key));
 
   if (!license) {
@@ -134,6 +139,10 @@ export async function validateLicense(
         set: { attempts: currentAttempts, lockedUntil: null },
       });
     return { valid: false, error: `Invalid license key. ${3 - currentAttempts} attempts remaining.` };
+  }
+
+  if (license.activatedBy && license.activatedBy !== playerId) {
+    return { valid: false, error: 'This license key is already in use.' };
   }
 
   await db
