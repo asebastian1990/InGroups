@@ -66,16 +66,24 @@ body {
   gap: 10px;
 }
 
+.app--auth {
+  max-width: min(100vw, 420px);
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
 .auth-screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-top: 32px;
+  align-items: stretch;
+  width: 100%;
+  padding: 24px 20px 32px;
+  box-sizing: border-box;
 }
 
 .auth-clerk {
   width: 100%;
-  max-width: 400px;
+  min-width: 0;
 }
 
 .auth-reset-link {
@@ -95,7 +103,6 @@ body {
 
 .guest-auth {
   width: 100%;
-  max-width: 400px;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--gray-200);

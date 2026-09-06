@@ -67,6 +67,10 @@ Keep this URL for Part B (`VITE_SERVER_URL`).
 |---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_...` or live key) |
 | `VITE_SERVER_URL` | Railway URL from Part A step 4 (no trailing slash) |
+| `VITE_CLERK_SIGN_IN_URL` | Your Pages URL with trailing slash, e.g. `https://ingroups.pages.dev/` |
+| `VITE_CLERK_SIGN_UP_URL` | Same as sign-in URL for this app |
+| `VITE_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | Same Pages URL (used when OAuth is cancelled) |
+| `VITE_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Same Pages URL |
 
 Redeploy after changing these (they are baked in at build time).
 
@@ -78,9 +82,11 @@ Save and deploy. Note the Pages URL, e.g. `https://ingroups.pages.dev`.
 
 **Railway:** update `CORS_ORIGIN` to your Pages URL (and custom domain when you add one).
 
-**Clerk:** **Configure → Paths** → add to allowed origins / fallback dev host pattern:
-- `https://ingroups.pages.dev` (your actual Pages URL)
-- Custom domain when ready
+**Clerk → Configure → Paths:** add your Pages URL to allowed origins / fallback dev host.
+
+**Clerk → Configure → Account Portal → Redirects:** set fallback URLs so a cancelled OAuth does not strand users on `*.accounts.dev`:
+- Sign-in fallback: `https://ingroups.pages.dev/` (your Pages URL)
+- Sign-up fallback: same URL
 
 ### 5. Custom domain (optional)
 
@@ -103,6 +109,7 @@ Update `CORS_ORIGIN` and Clerk redirect URLs to include the custom domain.
 
 | Symptom | Fix |
 |---|---|
+| OAuth lands on `*.accounts.dev` | Set Account Portal fallback redirects + Cloudflare `VITE_CLERK_SIGN_IN_URL` to your Pages URL; redeploy |
 | Blank page after sign-in | Browser console errors; confirm `VITE_SERVER_URL` was set before last Pages build |
 | Socket connection failed | Railway service running? `CORS_ORIGIN` includes exact Pages URL (https, no trailing slash) |
 | Unauthorized on socket | `CLERK_SECRET_KEY` on Railway matches the Clerk app used by the client publishable key |

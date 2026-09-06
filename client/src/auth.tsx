@@ -10,12 +10,22 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { configureAuth, configureGuestAuth, isGuestMode, resetAuth } from './api';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const APP_ROOT = '/';
 
-const signInRedirectProps = {
-  fallbackRedirectUrl: APP_ROOT,
-  signUpUrl: APP_ROOT,
-  signUpFallbackRedirectUrl: APP_ROOT,
+/** Clerk OAuth must use absolute app URLs — relative "/" sends failures to Account Portal. */
+function getAppUrls() {
+  const origin = window.location.origin;
+  return {
+    root: `${origin}/`,
+    origin,
+  };
+}
+
+const signInAppearance = {
+  elements: {
+    rootBox: { width: '100%', maxWidth: '100%' },
+    cardBox: { width: '100%', maxWidth: '100%' },
+    card: { width: '100%', maxWidth: '100%' },
+  },
 };
 
 function LoadingScreen() {
@@ -72,13 +82,15 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   if (!isLoaded) return <LoadingScreen />;
 
+  const { root: appRoot } = getAppUrls();
+
   if (isOAuthCallback()) {
     return (
-      <div className="app">
+      <div className="app app--auth">
         <main className="app-content auth-screen">
           <AuthenticateWithRedirectCallback
-            signInFallbackRedirectUrl={APP_ROOT}
-            signUpFallbackRedirectUrl={APP_ROOT}
+            signInFallbackRedirectUrl={appRoot}
+            signUpFallbackRedirectUrl={appRoot}
           />
         </main>
       </div>
@@ -88,13 +100,16 @@ function AuthGate({ children }: { children: ReactNode }) {
   return (
     <>
       <SignedOut>
-        <div className="app">
+        <div className="app app--auth">
           <main className="app-content auth-screen">
             <div className="auth-clerk">
               <SignIn
                 routing="hash"
-                oauthFlow="popup"
-                {...signInRedirectProps}
+                oauthFlow="redirect"
+                appearance={signInAppearance}
+                fallbackRedirectUrl={appRoot}
+                signUpUrl={appRoot}
+                signUpFallbackRedirectUrl={appRoot}
               />
             </div>
             {isStuckAuthRoute() && (
@@ -129,14 +144,17 @@ export function AppProviders({ children }: { children: ReactNode }) {
     );
   }
 
+  const { root: appRoot, origin: appOrigin } = getAppUrls();
+
   return (
     <ClerkProvider
       publishableKey={publishableKey}
-      signInUrl={APP_ROOT}
-      signUpUrl={APP_ROOT}
-      signInFallbackRedirectUrl={APP_ROOT}
-      signUpFallbackRedirectUrl={APP_ROOT}
-      afterSignOutUrl={APP_ROOT}
+      signInUrl={appRoot}
+      signUpUrl={appRoot}
+      signInFallbackRedirectUrl={appRoot}
+      signUpFallbackRedirectUrl={appRoot}
+      afterSignOutUrl={appRoot}
+      allowedRedirectOrigins={[appOrigin]}
     >
       <AuthGate>{children}</AuthGate>
     </ClerkProvider>
