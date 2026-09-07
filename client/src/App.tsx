@@ -10,6 +10,7 @@ import {
   readSession,
   onReconnect,
   onChatUpdate,
+  isGuestMode,
 } from './api';
 import { LogoMark } from './components/Logo';
 import { HeaderAuth } from './components/HeaderAuth';
@@ -203,6 +204,7 @@ export default function App() {
   }
 
   const isHost = room.myPlayerId === room.hostId;
+  const guest = isGuestMode();
 
   return (
     <div className="app">
@@ -213,9 +215,9 @@ export default function App() {
         </div>
         <div className="app-header-right">
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
-            {isHost ? 'Exit Game' : 'Leave'}
+            {guest ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
           </button>
-          <HeaderAuth />
+          {!guest && <HeaderAuth />}
         </div>
       </header>
 

@@ -12,7 +12,7 @@ export function HeaderAuth() {
           window.location.href = '/sign-in';
         }}
       >
-        Sign in
+        Exit
       </button>
     );
   }
