@@ -517,6 +517,28 @@ body {
   text-align: center;
 }
 
+.number-input-field {
+  width: 3.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  font-family: var(--font-sans);
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+.number-input-field:focus {
+  outline: 2px solid var(--brand-teal);
+  outline-offset: 1px;
+}
+
+.number-input-field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .menu-item {
   display: flex;
   align-items: center;
