@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LICENSE_MAX_QUANTITY } from '../../shared/types.js';
 import { clampLicenseQuantity, formatLicenseKey, randomLicenseKeyParts } from './licenses.js';
 
 describe('license key helpers', () => {
@@ -17,8 +18,10 @@ describe('license key helpers', () => {
   });
 
   it('clamps purchase quantity', () => {
+    expect(LICENSE_MAX_QUANTITY).toBe(100);
     expect(clampLicenseQuantity(0)).toBe(1);
     expect(clampLicenseQuantity(3)).toBe(3);
-    expect(clampLicenseQuantity(99)).toBe(10);
+    expect(clampLicenseQuantity(99)).toBe(99);
+    expect(clampLicenseQuantity(150)).toBe(100);
   });
 });

@@ -63,7 +63,7 @@ export interface LicenseInfo {
 /** One-time license purchase — unlocks premium word sets for one account. */
 export const LICENSE_UNIT_PRICE_CENTS = 2000;
 export const LICENSE_MIN_QUANTITY = 1;
-export const LICENSE_MAX_QUANTITY = 10;
+export const LICENSE_MAX_QUANTITY = 100;
 
 export interface PurchasedLicenseKey {
   key: string;

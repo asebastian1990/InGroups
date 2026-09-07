@@ -26,6 +26,7 @@ export function LicenseScreen({
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const loadSummary = useCallback(async () => {
     const data = await getLicensePurchaseSummary();
@@ -65,6 +66,30 @@ export function LicenseScreen({
   const activeLicense = summary?.activeLicense ?? null;
   const unusedPurchasedKeys =
     summary?.purchasedKeys.filter((entry) => !entry.activated).map((entry) => entry.key) ?? [];
+
+  const copyLicenseKey = async (licenseKey: string) => {
+    try {
+      await navigator.clipboard.writeText(licenseKey);
+      setCopiedKey(licenseKey);
+      window.setTimeout(() => {
+        setCopiedKey((current) => (current === licenseKey ? null : current));
+      }, 2000);
+    } catch {
+      setError('Could not copy to clipboard.');
+    }
+  };
+
+  const downloadUnusedKeysCsv = () => {
+    if (unusedPurchasedKeys.length === 0) return;
+    const lines = ['license_key', ...unusedPurchasedKeys.map((k) => `"${k.replace(/"/g, '""')}"`)];
+    const blob = new Blob([`${lines.join('\n')}\n`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'ingroups-unused-license-keys.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleActivate = async () => {
     const trimmed = key.trim();
@@ -118,11 +143,29 @@ export function LicenseScreen({
 
       {unusedPurchasedKeys.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <p className="section-label">Your unused license keys</p>
+          <div className="license-key-header">
+            <p className="section-label">Your unused license keys</p>
+            <button
+              type="button"
+              className="btn"
+              style={{ fontSize: '0.75rem', padding: '6px 10px' }}
+              onClick={downloadUnusedKeysCsv}
+            >
+              Download CSV
+            </button>
+          </div>
           <ul className="license-key-list">
             {unusedPurchasedKeys.map((licenseKey) => (
               <li key={licenseKey} className="license-key-item">
                 <code>{licenseKey}</code>
+                <button
+                  type="button"
+                  className="license-key-copy"
+                  onClick={() => copyLicenseKey(licenseKey)}
+                  aria-label={`Copy ${licenseKey}`}
+                >
+                  {copiedKey === licenseKey ? 'Copied!' : 'Copy'}
+                </button>
               </li>
             ))}
           </ul>
