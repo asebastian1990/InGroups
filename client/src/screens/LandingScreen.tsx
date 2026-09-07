@@ -79,7 +79,6 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
-          autoFocus
         />
 
         <div className="landing-section-divider" aria-hidden="true" />
