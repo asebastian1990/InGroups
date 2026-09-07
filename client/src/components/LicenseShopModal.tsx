@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LICENSE_MIN_QUANTITY } from '@shared/types';
+import { LICENSE_MIN_QUANTITY, LICENSE_UNIT_PRICE_CENTS } from '@shared/types';
 import { createLicenseCheckout, getLicenseShopConfig, type LicenseShopConfig } from '../api';
 import { Modal } from './UI';
 
@@ -26,7 +26,7 @@ export function LicenseShopModal({ onClose }: Props) {
   }, []);
 
   const maxQuantity = config?.maxQuantity ?? LICENSE_MIN_QUANTITY;
-  const unitPriceCents = config?.unitPriceCents ?? 2000;
+  const unitPriceCents = config?.unitPriceCents ?? LICENSE_UNIT_PRICE_CENTS;
   const totalCents = unitPriceCents * quantity;
 
   const handlePurchase = async () => {
@@ -45,8 +45,8 @@ export function LicenseShopModal({ onClose }: Props) {
   return (
     <Modal title="Get a License" onClose={onClose}>
       <p className="shop-lead">
-        Each license unlocks expanded word sets and custom word sets for <strong>one account</strong>.
-        Only the host needs a license to use expanded word sets in a game — buy extra keys to share with friends.
+        Each license is a <strong>one-time purchase</strong> that unlocks expanded and custom word sets for one account forever.
+        Buy extra licenses to share with others.
       </p>
 
       <div className="shop-price-row">
