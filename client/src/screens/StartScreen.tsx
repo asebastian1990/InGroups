@@ -7,9 +7,10 @@ import { PlayerList } from '../components/PlayerList';
 
 interface Props {
   room: ClientRoomState;
+  nameNotice?: string | null;
 }
 
-export function StartScreen({ room }: Props) {
+export function StartScreen({ room, nameNotice }: Props) {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const isHost = room.myPlayerId === room.hostId;
 
@@ -26,6 +27,12 @@ export function StartScreen({ room }: Props) {
       </div>
 
       <PlayerList players={room.players} />
+
+      {nameNotice && (
+        <p className="info-msg" style={{ marginTop: 12 }}>
+          {nameNotice}
+        </p>
+      )}
 
       {isHost ? (
         <div style={{ marginTop: 24 }}>

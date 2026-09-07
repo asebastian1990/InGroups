@@ -40,6 +40,7 @@ export default function App() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [closedMessage, setClosedMessage] = useState<string | null>(null);
   const [landingView, setLandingView] = useState<LandingView>('home');
+  const [lobbyNameNotice, setLobbyNameNotice] = useState<string | null>(null);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
 
@@ -53,6 +54,7 @@ export default function App() {
     setRoom(null);
     setScreen('start');
     setLandingView('home');
+    setLobbyNameNotice(null);
     setShowExitConfirm(false);
     if (message) setClosedMessage(message);
   }, []);
@@ -137,15 +139,22 @@ export default function App() {
     }
   };
 
-  const handleEnter = (pid: string, _code: string, initialRoom?: ClientRoomState) => {
+  const handleEnter = (pid: string, _code: string, initialRoom?: ClientRoomState, requestedName?: string) => {
     setClosedMessage(null);
     setLandingView('home');
     sessionActiveRef.current = true;
     setPlayerId(pid);
     if (initialRoom) {
+      const me = initialRoom.players.find((p) => p.id === pid);
+      if (me && requestedName && me.name !== requestedName) {
+        setLobbyNameNotice(`You're listed as "${me.name}" because that name was already taken.`);
+      } else {
+        setLobbyNameNotice(null);
+      }
       setRoom(initialRoom);
       setScreen(screenForRoom(initialRoom));
     } else {
+      setLobbyNameNotice(null);
       setScreen('start');
     }
   };
@@ -212,7 +221,7 @@ export default function App() {
 
       <main className="app-content">
         {screen === 'start' && (
-          <StartScreen room={room} />
+          <StartScreen room={room} nameNotice={lobbyNameNotice} />
         )}
         {screen === 'game' && (
           <GameScreen room={room} onNavigate={(s) => setScreen(s as Screen)} />

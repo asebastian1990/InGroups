@@ -1,20 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Logo } from '../components/Logo';
 import { createRoom, joinRoom, isGuestMode } from '../api';
 import type { ClientRoomState } from '@shared/types';
 
 interface Props {
-  onEnter: (playerId: string, roomCode: string, room?: ClientRoomState) => void;
+  onEnter: (playerId: string, roomCode: string, room?: ClientRoomState, requestedName?: string) => void;
   onNavigate: (screen: string) => void;
 }
 
+function defaultNameFromClerkUser(user: NonNullable<ReturnType<typeof useUser>['user']>): string {
+  if (user.fullName) return user.fullName;
+  const first = user.firstName?.trim();
+  const last = user.lastName?.trim();
+  if (first && last) return `${first} ${last}`;
+  if (first) return first;
+  if (user.username) return user.username;
+  const email = user.primaryEmailAddress?.emailAddress;
+  if (email) return email.split('@')[0] ?? '';
+  return '';
+}
+
 export function LandingScreen({ onEnter, onNavigate }: Props) {
-  const [name, setName] = useState('');
+  const { user, isLoaded: userLoaded } = useUser();
+  const guest = isGuestMode();
+  const [name, setName] = useState(() => (guest ? 'Guest' : ''));
+
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const guest = isGuestMode();
+
+  useEffect(() => {
+    if (guest || !userLoaded || !user) return;
+    setName((current) => current || defaultNameFromClerkUser(user));
+  }, [guest, userLoaded, user]);
 
   const handleCreate = async () => {
     if (!name.trim() || creating || joining) return;
@@ -22,7 +42,7 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
     setError('');
     try {
       const { playerId, room } = await createRoom(name.trim());
-      onEnter(playerId, room.code, room);
+      onEnter(playerId, room.code, room, name.trim());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create room');
     } finally {
@@ -36,7 +56,7 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
     setError('');
     try {
       const { playerId, room } = await joinRoom(roomCode.trim(), name.trim());
-      onEnter(playerId, room.code, room);
+      onEnter(playerId, room.code, room, name.trim());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to join room');
     } finally {

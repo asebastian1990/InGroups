@@ -75,6 +75,11 @@ describe('resolveUniquePlayerName', () => {
   it('increments suffix until unique', () => {
     expect(resolveUniquePlayerName(['Alice', 'Alice (2)'], 'Alice')).toBe('Alice (3)');
   });
+
+  it('deduplicates default guest names', () => {
+    expect(resolveUniquePlayerName(['Guest'], 'Guest')).toBe('Guest (2)');
+    expect(resolveUniquePlayerName(['Guest', 'Guest (2)'], 'Guest')).toBe('Guest (3)');
+  });
 });
 
 describe('assignGroups', () => {

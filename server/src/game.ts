@@ -17,7 +17,7 @@ export function createRoom(hostName: string, hostId: string): RoomState {
   const code = generateRoomCode();
   const host: Player = {
     id: hostId,
-    name: hostName,
+    name: hostName.trim(),
     score: 0,
     isHost: true,
     guess: null,
