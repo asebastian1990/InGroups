@@ -2,6 +2,7 @@ import './env.js';
 import { and, count, eq } from 'drizzle-orm';
 import { FREE_WORD_SETS, type WordSet } from '../../shared/types.js';
 import { db } from './db/client.js';
+import { ensureSchema } from './db/migrate.js';
 import { customWordSets, licenseAttempts, licenses, users } from './db/schema.js';
 import { generateUniqueLicenseKey } from './licenses.js';
 
@@ -18,6 +19,8 @@ export {
 } from './licenses.js';
 
 export async function initDb() {
+  await ensureSchema();
+
   const [{ value: licenseCount }] = await db.select({ value: count() }).from(licenses);
 
   if (licenseCount === 0) {
