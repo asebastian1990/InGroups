@@ -2,8 +2,6 @@ import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
   SignIn,
-  SignedIn,
-  SignedOut,
   useAuth,
 } from '@clerk/clerk-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -120,18 +118,15 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
+  if (isSignedIn) {
+    return <>{children}</>;
+  }
+
   if (!isSignInPath()) {
     return <LoadingScreen />;
   }
 
-  return (
-    <>
-      <SignedOut>
-        <SignInScreen onContinueAsGuest={continueAsGuest} />
-      </SignedOut>
-      <SignedIn>{children}</SignedIn>
-    </>
-  );
+  return <SignInScreen onContinueAsGuest={continueAsGuest} />;
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
