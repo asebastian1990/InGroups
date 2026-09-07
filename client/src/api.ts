@@ -1,6 +1,13 @@
 import { io, Socket } from 'socket.io-client';
 
-import type { ClientRoomState, WordSet, LicenseInfo, ChatMessage } from '@shared/types';
+import type {
+  ClientRoomState,
+  WordSet,
+  LicenseInfo,
+  LicenseCheckoutResponse,
+  LicensePurchaseSummary,
+  ChatMessage,
+} from '@shared/types';
 
 
 
@@ -606,6 +613,62 @@ export function getLicense(): Promise<LicenseInfo | null> {
 
   return emitWithAck<LicenseInfo | null>('getLicense');
 
+}
+
+export interface LicenseShopConfig {
+  enabled: boolean;
+  unitPriceCents: number;
+  minQuantity: number;
+  maxQuantity: number;
+}
+
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const auth = await authPayload();
+  if (!auth.token) {
+    throw new Error('Not signed in');
+  }
+
+  const res = await fetch(`${SERVER_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${auth.token}`,
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'Request failed');
+  }
+  return data as T;
+}
+
+export async function getLicenseShopConfig(): Promise<LicenseShopConfig> {
+  const res = await fetch(`${SERVER_URL}/api/licenses/config`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'Failed to load shop');
+  }
+  return data as LicenseShopConfig;
+}
+
+export function getLicensePurchaseSummary(): Promise<LicensePurchaseSummary> {
+  return apiRequest<LicensePurchaseSummary>('/api/licenses/summary');
+}
+
+export function createLicenseCheckout(quantity: number): Promise<LicenseCheckoutResponse> {
+  return apiRequest<LicenseCheckoutResponse>('/api/licenses/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ quantity }),
+  });
+}
+
+export function confirmLicensePurchase(sessionId: string): Promise<LicensePurchaseSummary> {
+  return apiRequest<LicensePurchaseSummary>('/api/licenses/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
 }
 
 

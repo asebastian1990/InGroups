@@ -5,6 +5,20 @@ export const licenses = pgTable('licenses', {
   icon: text('icon'),
   activatedBy: text('activated_by'),
   activatedAt: bigint('activated_at', { mode: 'number' }),
+  purchasedBy: text('purchased_by'),
+  orderId: text('order_id'),
+  createdAt: bigint('created_at', { mode: 'number' }),
+});
+
+export const licenseOrders = pgTable('license_orders', {
+  id: text('id').primaryKey(),
+  buyerClerkId: text('buyer_clerk_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  stripeSessionId: text('stripe_session_id').unique(),
+  status: text('status').notNull().default('pending'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  completedAt: bigint('completed_at', { mode: 'number' }),
 });
 
 export const licenseAttempts = pgTable('license_attempts', {

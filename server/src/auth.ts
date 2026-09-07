@@ -49,6 +49,12 @@ async function authenticateClerkToken(token: string): Promise<{ clerkUserId: str
   }
 }
 
+export async function authenticateBearerToken(token: string): Promise<AuthContext | null> {
+  const clerk = await authenticateClerkToken(token);
+  if (!clerk) return null;
+  return { playerId: clerk.clerkUserId, userId: clerk.userId, isGuest: false };
+}
+
 export async function authenticateConnection(handshakeAuth: {
   token?: string;
   guestId?: string;

@@ -108,8 +108,8 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
             <span className="menu-item-arrow">›</span>
           </div>
           <div className="menu-item" onClick={() => onNavigate('license')}>
-            <span>License Key</span>
-            <span className="menu-item-arrow">›</span>
+            <span>License</span>
+            <span className="menu-item-arrow">Get or activate ›</span>
           </div>
         </div>
       )}

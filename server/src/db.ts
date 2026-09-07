@@ -1,17 +1,35 @@
 import './env.js';
-import { randomBytes } from 'crypto';import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { FREE_WORD_SETS, type WordSet } from '../../shared/types.js';
 import { db } from './db/client.js';
 import { customWordSets, licenseAttempts, licenses, users } from './db/schema.js';
+import { generateUniqueLicenseKey } from './licenses.js';
+
+export {
+  createPendingLicenseOrder,
+  fulfillLicenseOrder,
+  generateUniqueLicenseKey,
+  generateUniqueLicenseKeys,
+  getLicensePurchaseSummary,
+  getLicenseOrder,
+  getLicenseOrderByStripeSession,
+  attachStripeSessionToOrder,
+  clampLicenseQuantity,
+} from './licenses.js';
 
 export async function initDb() {
   const [{ value: licenseCount }] = await db.select({ value: count() }).from(licenses);
 
   if (licenseCount === 0) {
+    const now = Date.now();
+    const seedKeys = await Promise.all(
+      Array.from({ length: 5 }, async () => generateUniqueLicenseKey())
+    );
     await db.insert(licenses).values(
-      Array.from({ length: 5 }, () => ({
-        key: generateLicenseKey(),
+      seedKeys.map((key) => ({
+        key,
         icon: '',
+        createdAt: now,
       }))
     );
   }
@@ -20,14 +38,6 @@ export async function initDb() {
   console.log('\n📋 Available license keys:');
   keys.forEach((k) => console.log(`  ${k.key}${k.activatedBy ? ' (activated)' : ''}`));
   console.log('');
-}
-
-function generateLicenseKey(): string {
-  const parts = [];
-  for (let i = 0; i < 5; i++) {
-    parts.push(randomBytes(2).toString('hex').toUpperCase());
-  }
-  return parts.join('-');
 }
 
 export async function getWordSets(hasLicense: boolean, ownerId?: string): Promise<WordSet[]> {
@@ -159,8 +169,8 @@ export async function getPlayerLicense(playerId: string): Promise<{ key: string 
 }
 
 export async function generateNewLicense(): Promise<string> {
-  const key = generateLicenseKey();
-  await db.insert(licenses).values({ key, icon: '' });
+  const key = await generateUniqueLicenseKey();
+  await db.insert(licenses).values({ key, icon: '', createdAt: Date.now() });
   return key;
 }
 

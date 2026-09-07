@@ -4,10 +4,11 @@ import { getWordSets, saveWordSet, deleteWordSet, getLicense } from '../api';
 
 interface Props {
   onBack: () => void;
+  onGetLicense?: () => void;
   editSet?: WordSet;
 }
 
-export function CreateWordSetScreen({ onBack, editSet }: Props) {
+export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
   const [hasLicense, setHasLicense] = useState(false);
   const [name, setName] = useState(editSet?.name ?? '');
   const [wordsText, setWordsText] = useState(editSet?.words.join('\n') ?? '');
@@ -76,7 +77,14 @@ export function CreateWordSetScreen({ onBack, editSet }: Props) {
       <div>
         <button className="back-link" onClick={onBack}>← Back</button>
         <h2 style={{ fontSize: '1.2rem', marginBottom: 16 }}>Create Word Set</h2>
-        <p className="info-msg">Subscribe to create your own word sets!</p>
+        <p className="info-msg" style={{ marginBottom: 16 }}>
+          Add a license to create your own word sets!
+        </p>
+        {onGetLicense && (
+          <button type="button" className="btn btn-primary" onClick={onGetLicense}>
+            Get a License
+          </button>
+        )}
       </div>
     );
   }

@@ -26,6 +26,19 @@ import { ChatPanel } from './components/ChatPanel';
 type Screen = 'start' | 'game' | 'wordSet';
 type LandingView = 'home' | 'license' | 'createWordSet';
 
+function readLicenseReturnParams() {
+  const params = new URLSearchParams(window.location.search);
+  const purchase = params.get('purchase');
+  return {
+    openLicense: params.get('view') === 'license',
+    purchaseStatus:
+      purchase === 'success' ? ('success' as const)
+      : purchase === 'cancelled' ? ('cancelled' as const)
+      : null,
+    sessionId: params.get('session_id'),
+  };
+}
+
 function screenForRoom(room: ClientRoomState): Screen {
   if (room.groups.length > 0 || room.phase === 'playing' || room.phase === 'roundEnd') {
     return 'game';
@@ -34,13 +47,17 @@ function screenForRoom(room: ClientRoomState): Screen {
 }
 
 export default function App() {
+  const initialLicenseReturn = readLicenseReturnParams();
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [room, setRoom] = useState<ClientRoomState | null>(null);
   const [screen, setScreen] = useState<Screen>('start');
   const [initialized, setInitialized] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [closedMessage, setClosedMessage] = useState<string | null>(null);
-  const [landingView, setLandingView] = useState<LandingView>('home');
+  const [landingView, setLandingView] = useState<LandingView>(
+    initialLicenseReturn.openLicense ? 'license' : 'home'
+  );
+  const [licenseReturn, setLicenseReturn] = useState(initialLicenseReturn);
   const [lobbyNameNotice, setLobbyNameNotice] = useState<string | null>(null);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
@@ -160,6 +177,15 @@ export default function App() {
     }
   };
 
+  const clearLicenseReturnParams = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('view');
+    url.searchParams.delete('purchase');
+    url.searchParams.delete('session_id');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    setLicenseReturn({ openLicense: true, purchaseStatus: null, sessionId: null });
+  }, []);
+
   if (!initialized) {
     return (
       <div className="app">
@@ -187,10 +213,18 @@ export default function App() {
         </header>
         <main className="app-content">
           {landingView === 'license' && (
-            <LicenseScreen onBack={() => setLandingView('home')} />
+            <LicenseScreen
+              onBack={() => setLandingView('home')}
+              purchaseStatus={licenseReturn.purchaseStatus}
+              purchaseSessionId={licenseReturn.sessionId}
+              onPurchaseHandled={clearLicenseReturnParams}
+            />
           )}
           {landingView === 'createWordSet' && (
-            <CreateWordSetScreen onBack={() => setLandingView('home')} />
+            <CreateWordSetScreen
+              onBack={() => setLandingView('home')}
+              onGetLicense={() => setLandingView('license')}
+            />
           )}
           {landingView === 'home' && (
             <LandingScreen

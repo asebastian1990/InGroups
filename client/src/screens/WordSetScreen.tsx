@@ -82,9 +82,11 @@ export function WordSetScreen({ room, onBack }: Props) {
         </>
       )}
 
-      <p className="info-msg" style={{ marginTop: 20, fontSize: '0.85rem' }}>
-        Subscribe for more word sets and to create your own!
-      </p>
+      {isHost && premiumSets.length === 0 && (
+        <p className="info-msg" style={{ marginTop: 20, fontSize: '0.85rem' }}>
+          Add a license to unlock expanded word sets for games you host.
+        </p>
+      )}
     </div>
   );
 }
