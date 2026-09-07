@@ -92,7 +92,7 @@ export function HowToPlayModal({ onClose }: { onClose: () => void }) {
           <li>Some In Group agree → +1 each who matched</li>
         </ul>
         <br />
-        <p>Rounds last 5 minutes or until everyone locks in a guess.</p>
+        <p>Rounds end when everyone locks in a guess, or when the host ends the round early.</p>
       </div>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={onClose}>Got it</button>

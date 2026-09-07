@@ -2,8 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Group, Player, RoomState } from '../../shared/types.js';
 import { FREE_WORD_SETS, MIN_IN_GROUP_SIZE, MIN_PLAYERS } from '../../shared/types.js';
 
-const ROUND_DURATION = 5 * 60; // 5 minutes in seconds
-
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code = '';
@@ -119,6 +117,84 @@ export function shiftGroups(groups: Group[]): Group[] {
   return groups.map((g, i) => ({ ...g, isInGroup: i === newInGroupIdx }));
 }
 
+/** Place a newly joined player into groups after the game has started. */
+export function assignJoinedPlayerToGroup(groups: Group[], playerId: string): Group[] {
+  if (groups.length === 0) return groups;
+  if (groups.some((g) => g.playerIds.includes(playerId))) return groups;
+
+  const inGroup = groups.find((g) => g.isInGroup);
+  if (!inGroup) return groups;
+
+  if (inGroup.playerIds.length < MIN_IN_GROUP_SIZE) {
+    return groups.map((g) =>
+      g.isInGroup ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+    );
+  }
+
+  const emptyOutGroup = groups.find((g) => !g.isInGroup && g.playerIds.length === 0);
+  if (emptyOutGroup) {
+    return groups.map((g) =>
+      g.id === emptyOutGroup.id ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+    );
+  }
+
+  return groups.map((g) =>
+    g.isInGroup ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+  );
+}
+
+export function movePlayerToGroup(
+  groups: Group[],
+  playerId: string,
+  destination: 'inGroup' | number
+): { groups: Group[]; error?: string } {
+  const sourceGroup = groups.find((g) => g.playerIds.includes(playerId));
+  if (!sourceGroup) {
+    return { groups, error: 'Player is not assigned to a group.' };
+  }
+
+  if (destination === 'inGroup') {
+    const inGroup = groups.find((g) => g.isInGroup);
+    if (!inGroup) {
+      return { groups, error: 'In Group not found.' };
+    }
+    if (sourceGroup.isInGroup) {
+      return { groups, error: 'Player is already in the In Group.' };
+    }
+
+    const next = groups.map((g) => ({
+      ...g,
+      playerIds: g.playerIds.filter((id) => id !== playerId),
+    }));
+    return {
+      groups: next.map((g) =>
+        g.isInGroup ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+      ),
+    };
+  }
+
+  const targetGroup = groups.find((g) => g.id === destination && !g.isInGroup);
+  if (!targetGroup) {
+    return { groups, error: 'Out Group not found.' };
+  }
+  if (sourceGroup.id === targetGroup.id) {
+    return { groups, error: 'Player is already in that Out Group.' };
+  }
+  if (!sourceGroup.isInGroup) {
+    return { groups, error: 'Use Move to In Group for Out Group players.' };
+  }
+
+  const next = groups.map((g) => ({
+    ...g,
+    playerIds: g.playerIds.filter((id) => id !== playerId),
+  }));
+  return {
+    groups: next.map((g) =>
+      g.id === targetGroup.id ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+    ),
+  };
+}
+
 export function selectRoundWords(wordSetId: string, customWords?: string[]): string[] {
   let words: string[];
   if (customWords) {
@@ -214,15 +290,3 @@ export function calculateScores(room: RoomState): Map<string, number> {
 export function allPlayersGuessed(room: RoomState): boolean {
   return room.players.every((p) => p.guess !== null);
 }
-
-export function getRemainingTime(room: RoomState): number {
-  if (!room.roundStartedAt) return ROUND_DURATION;
-  const elapsed = Math.floor((Date.now() - room.roundStartedAt) / 1000);
-  return Math.max(0, ROUND_DURATION - elapsed);
-}
-
-export function isRoundExpired(room: RoomState): boolean {
-  return getRemainingTime(room) <= 0;
-}
-
-export { ROUND_DURATION };

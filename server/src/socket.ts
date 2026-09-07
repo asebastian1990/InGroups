@@ -7,12 +7,11 @@ import {
   resolveUniquePlayerName,
   hasGroupBelowMinSize,
   shiftGroups,
+  movePlayerToGroup,
+  assignJoinedPlayerToGroup,
   selectRoundWords,
   calculateScores,
   allPlayersGuessed,
-  getRemainingTime,
-  isRoundExpired,
-  ROUND_DURATION,
 } from './game.js';
 import {
   getWordSets,
@@ -29,7 +28,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 const rooms = new Map<string, RoomState>();
 const playerRooms = new Map<string, string>();
-const timers = new Map<string, ReturnType<typeof setInterval>>();
 const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const DISCONNECT_GRACE_MS = 45_000;
@@ -102,16 +100,15 @@ function broadcastRoom(io: Server, room: RoomState) {
   }
 }
 
-function clearTimer(code: string) {
-  const timer = timers.get(code);
-  if (timer) {
-    clearInterval(timer);
-    timers.delete(code);
+function getRoomForPlayer(playerId: string | null): RoomState | undefined {
+  if (!playerId) return undefined;
+  for (const room of rooms.values()) {
+    if (room.players.some((p) => p.id === playerId)) return room;
   }
+  return undefined;
 }
 
 function closeRoom(io: Server, room: RoomState, reason: string) {
-  clearTimer(room.code);
   io.to(room.code).emit('gameClosed', { reason });
   for (const player of room.players) {
     playerRooms.delete(player.id);
@@ -127,7 +124,6 @@ function removePlayerFromRoom(io: Server, room: RoomState, playerId: string) {
   }
   playerRooms.delete(playerId);
   if (room.players.length === 0) {
-    clearTimer(room.code);
     rooms.delete(room.code);
     return;
   }
@@ -138,14 +134,26 @@ function removePlayerFromRoom(io: Server, room: RoomState, playerId: string) {
   broadcastRoom(io, room);
 }
 
+function kickPlayerFromRoom(io: Server, room: RoomState, playerId: string, reason: string) {
+  clearDisconnectTimer(playerId);
+  const socketId = playerRooms.get(playerId);
+  if (socketId) {
+    const kickedSocket = io.sockets.sockets.get(socketId);
+    if (kickedSocket) {
+      kickedSocket.emit('gameClosed', { reason });
+      kickedSocket.leave(room.code);
+    }
+  }
+  removePlayerFromRoom(io, room, playerId);
+}
+
 function abortRoundNoScore(io: Server, room: RoomState) {
-  clearTimer(room.code);
   room.players.forEach((p) => {
     p.guess = null;
     p.roundPoints = 0;
   });
   room.phase = 'roundEnd';
-  room.roundTimer = 0;
+  room.roundTimer = null;
   room.roundWords = [];
   room.chatMessages = [];
   room.roundStartedAt = null;
@@ -155,26 +163,7 @@ function abortRoundNoScore(io: Server, room: RoomState) {
   broadcastRoom(io, room);
 }
 
-function startRoundTimer(io: Server, room: RoomState) {
-  clearTimer(room.code);
-  const timer = setInterval(() => {
-    const r = rooms.get(room.code);
-    if (!r || r.phase !== 'playing') {
-      clearTimer(room.code);
-      return;
-    }
-    r.roundTimer = getRemainingTime(r);
-    if (isRoundExpired(r) || allPlayersGuessed(r)) {
-      endRound(io, r);
-    } else {
-      broadcastRoom(io, r);
-    }
-  }, 1000);
-  timers.set(room.code, timer);
-}
-
 function endRound(io: Server, room: RoomState) {
-  clearTimer(room.code);
   const points = calculateScores(room);
   room.players.forEach((p) => {
     const pts = points.get(p.id) ?? 0;
@@ -182,7 +171,8 @@ function endRound(io: Server, room: RoomState) {
     p.score += pts;
   });
   room.phase = 'roundEnd';
-  room.roundTimer = 0;
+  room.roundTimer = null;
+  room.roundStartedAt = null;
   room.waitingForHost = true;
   room.roundNotice = null;
   broadcastRoom(io, room);
@@ -261,6 +251,12 @@ export function setupSocketHandlers(io: Server) {
         guess: null,
         roundPoints: 0,
       });
+      if (room.groups.length > 0) {
+        room.groups = assignJoinedPlayerToGroup(room.groups, playerId);
+        if (!hasGroupBelowMinSize(room.groups)) {
+          room.needsReshuffle = false;
+        }
+      }
       playerRooms.set(playerId, socket.id);
       socket.join(room.code);
       broadcastRoom(io, room);
@@ -328,12 +324,11 @@ export function setupSocketHandlers(io: Server) {
       room.roundWords = selectRoundWords(room.wordSetId, customWords ?? undefined);
       room.phase = 'playing';
       room.chatMessages = [];
-      room.roundStartedAt = Date.now();
-      room.roundTimer = ROUND_DURATION;
+      room.roundStartedAt = null;
+      room.roundTimer = null;
       room.waitingForHost = false;
       room.needsReshuffle = false;
       room.roundNotice = null;
-      startRoundTimer(io, room);
       broadcastRoom(io, room);
     });
 
@@ -434,6 +429,108 @@ export function setupSocketHandlers(io: Server) {
         p.roundPoints = 0;
       });
       broadcastRoom(io, room);
+    });
+
+    socket.on('movePlayer', (data, cb) => {
+      let targetPlayerId = '';
+      let destination: 'inGroup' | number | null = null;
+      let ack = cb;
+
+      if (typeof data === 'function') {
+        ack = data;
+      } else if (data && typeof data === 'object') {
+        targetPlayerId = String(data.playerId ?? '').trim();
+        if (data.destination === 'inGroup') {
+          destination = 'inGroup';
+        } else if (data.outGroupId !== undefined && data.outGroupId !== null) {
+          destination = Number(data.outGroupId);
+        }
+      }
+
+      const respond = typeof ack === 'function' ? ack : () => {};
+
+      try {
+        const room = getRoomForPlayer(currentPlayerId);
+        if (!room || room.hostId !== currentPlayerId) {
+          respond({ success: false, error: 'Not authorized' });
+          return;
+        }
+        if (room.phase === 'playing') {
+          respond({ success: false, error: 'Cannot move players during a round' });
+          return;
+        }
+        if (!targetPlayerId) {
+          respond({ success: false, error: 'Missing playerId' });
+          return;
+        }
+        if (destination === null || (typeof destination === 'number' && !Number.isFinite(destination))) {
+          respond({ success: false, error: 'Missing destination' });
+          return;
+        }
+        if (!room.players.some((p) => p.id === targetPlayerId)) {
+          respond({ success: false, error: 'Player not found' });
+          return;
+        }
+
+        const result = movePlayerToGroup(room.groups, targetPlayerId, destination);
+        if (result.error) {
+          respond({ success: false, error: result.error });
+          return;
+        }
+
+        room.groups = result.groups;
+        if (!hasGroupBelowMinSize(room.groups)) {
+          room.needsReshuffle = false;
+        }
+        broadcastRoom(io, room);
+        respond({ success: true });
+      } catch (err) {
+        console.error('movePlayer error:', err);
+        respond({ success: false, error: 'Failed to move player' });
+      }
+    });
+
+    socket.on('removePlayer', (data, cb) => {
+      let targetPlayerId = '';
+      let ack = cb;
+
+      if (typeof data === 'function') {
+        ack = data;
+      } else if (data && typeof data === 'object' && 'playerId' in data) {
+        targetPlayerId = String(data.playerId ?? '').trim();
+      }
+
+      const respond = typeof ack === 'function' ? ack : () => {};
+
+      try {
+        const room = getRoomForPlayer(currentPlayerId);
+        if (!room || room.hostId !== currentPlayerId) {
+          respond({ success: false, error: 'Not authorized' });
+          return;
+        }
+        if (room.phase === 'playing') {
+          respond({ success: false, error: 'Cannot remove players during a round' });
+          return;
+        }
+        if (!targetPlayerId) {
+          respond({ success: false, error: 'Missing playerId' });
+          return;
+        }
+        if (targetPlayerId === room.hostId) {
+          respond({ success: false, error: 'Cannot remove the host' });
+          return;
+        }
+        if (!room.players.some((p) => p.id === targetPlayerId)) {
+          respond({ success: false, error: 'Player not found' });
+          return;
+        }
+
+        kickPlayerFromRoom(io, room, targetPlayerId, 'You were removed from the game by the host.');
+        respond({ success: true });
+      } catch (err) {
+        console.error('removePlayer error:', err);
+        respond({ success: false, error: 'Failed to remove player' });
+      }
     });
 
     socket.on('getWordSets', async (_data, cb) => {
@@ -575,13 +672,5 @@ export function setupSocketHandlers(io: Server) {
 
       scheduleDisconnectedPlayerCleanup(io, currentPlayerId);
     });
-
-    function getRoomForPlayer(playerId: string | null): RoomState | undefined {
-      if (!playerId) return undefined;
-      for (const room of rooms.values()) {
-        if (room.players.some((p) => p.id === playerId)) return room;
-      }
-      return undefined;
-    }
   });
 }

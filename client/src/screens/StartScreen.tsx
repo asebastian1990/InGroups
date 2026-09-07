@@ -44,7 +44,7 @@ export function StartScreen({ room, nameNotice }: Props) {
             Start Game
           </button>
           {room.players.length < MIN_PLAYERS && (
-            <p className="info-msg" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+            <p className="error-msg">
               Need at least {MIN_PLAYERS} players ({room.players.length} joined)
             </p>
           )}

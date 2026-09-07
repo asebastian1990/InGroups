@@ -8,35 +8,50 @@ import {
   shuffleGroups,
   shiftGroups,
   resetScores,
+  removePlayer,
+  movePlayer,
   getWordSets,
   updateSettings,
 } from '../api';
 import { Collapsible, ConfirmModal, Modal } from '../components/UI';
+import { ThoughtfulPrompts } from '../components/ThoughtfulPrompts';
 
 interface Props {
   room: ClientRoomState;
   onNavigate: (screen: string) => void;
 }
 
-function formatTime(seconds: number | null): string {
-  if (seconds === null) return '5:00';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 function PlayerRow({
   player,
   showGuess,
   myPlayerId,
+  onSelect,
 }: {
   player: ClientPlayer;
   showGuess: boolean;
   myPlayerId: string;
+  onSelect?: (player: ClientPlayer) => void;
 }) {
   const isMe = player.id === myPlayerId;
+  const selectable = !!onSelect;
+
   return (
-    <li className="player-item">
+    <li
+      className={`player-item${selectable ? ' player-item-selectable' : ''}`}
+      onClick={selectable ? () => onSelect(player) : undefined}
+      onKeyDown={
+        selectable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(player);
+              }
+            }
+          : undefined
+      }
+      role={selectable ? 'button' : undefined}
+      tabIndex={selectable ? 0 : undefined}
+    >
       <span className="player-icon">
         {player.name.charAt(0).toUpperCase()}
       </span>
@@ -61,6 +76,8 @@ function PlayerRow({
 
 export function GameScreen({ room, onNavigate }: Props) {
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ClientPlayer | null>(null);
+  const [removeConfirmPlayer, setRemoveConfirmPlayer] = useState<ClientPlayer | null>(null);
   const [wordSets, setWordSets] = useState<WordSet[]>([]);
   const [hostError, setHostError] = useState('');
   const [showRoomCode, setShowRoomCode] = useState(false);
@@ -83,6 +100,8 @@ export function GameScreen({ room, onNavigate }: Props) {
   const isPlaying = room.phase === 'playing';
   const isRoundEnd = room.phase === 'roundEnd';
   const showResults = isRoundEnd;
+  const canManagePlayers = isHost && !isPlaying;
+  const handleSelectPlayer = canManagePlayers ? setSelectedPlayer : undefined;
   const myGuess = room.players.find((p) => p.id === room.myPlayerId)?.guess ?? null;
 
   const inGroup = room.groups.find((g) => g.isInGroup);
@@ -98,6 +117,36 @@ export function GameScreen({ room, onNavigate }: Props) {
 
   const handleWordClick = (word: string) => {
     submitGuess(myGuess === word ? null : word);
+  };
+
+  const handleMovePlayer = (playerId: string, destination: 'inGroup' | number) => {
+    setSelectedPlayer(null);
+    setHostError('');
+    void movePlayer(playerId, destination)
+      .then((result) => {
+        if (!result.success) {
+          setHostError(result.error ?? 'Failed to move player');
+        }
+      })
+      .catch((err) => {
+        setHostError(err instanceof Error ? err.message : 'Failed to move player');
+      });
+  };
+
+  const handleConfirmRemovePlayer = () => {
+    if (!removeConfirmPlayer) return;
+    const player = removeConfirmPlayer;
+    setRemoveConfirmPlayer(null);
+    setHostError('');
+    void removePlayer(player.id)
+      .then((result) => {
+        if (!result.success) {
+          setHostError(result.error ?? 'Failed to remove player');
+        }
+      })
+      .catch((err) => {
+        setHostError(err instanceof Error ? err.message : 'Failed to remove player');
+      });
   };
 
   const handleConfirm = () => {
@@ -155,7 +204,13 @@ export function GameScreen({ room, onNavigate }: Props) {
   const inGroupSection = (
     <Collapsible title="In Group" open={inGroupOpen} onOpenChange={setInGroupOpen}>
       {inGroup && getGroupPlayers(inGroup.id).map((p) => (
-        <PlayerRow key={p.id} player={p} showGuess={showResults} myPlayerId={room.myPlayerId} />
+        <PlayerRow
+          key={p.id}
+          player={p}
+          showGuess={showResults}
+          myPlayerId={room.myPlayerId}
+          onSelect={handleSelectPlayer}
+        />
       ))}
     </Collapsible>
   );
@@ -166,7 +221,13 @@ export function GameScreen({ room, onNavigate }: Props) {
         <div key={group.id}>
           <p className="group-label">Group {group.id + 1}</p>
           {getGroupPlayers(group.id).map((p) => (
-            <PlayerRow key={p.id} player={p} showGuess={showResults} myPlayerId={room.myPlayerId} />
+            <PlayerRow
+              key={p.id}
+              player={p}
+              showGuess={showResults}
+              myPlayerId={room.myPlayerId}
+              onSelect={handleSelectPlayer}
+            />
           ))}
         </div>
       ))}
@@ -179,7 +240,13 @@ export function GameScreen({ room, onNavigate }: Props) {
         {[...room.players]
           .sort((a, b) => b.score - a.score)
           .map((p) => (
-            <PlayerRow key={p.id} player={p} showGuess={false} myPlayerId={room.myPlayerId} />
+            <PlayerRow
+              key={p.id}
+              player={p}
+              showGuess={false}
+              myPlayerId={room.myPlayerId}
+              onSelect={handleSelectPlayer}
+            />
           ))}
       </ul>
       {isHost && (
@@ -213,11 +280,11 @@ export function GameScreen({ room, onNavigate }: Props) {
 
           {isPlaying && room.roundWords.length > 0 && (
             <>
-              <div className="timer">{formatTime(room.roundTimer)}</div>
-
               <div className={`round-banner ${room.myRole === 'inGroup' ? 'in-group' : 'out-group'}`}>
                 {activeRoundMessage}
               </div>
+
+              {room.myRole === 'inGroup' && <ThoughtfulPrompts />}
 
               <div className="word-grid">
                 {room.roundWords.map((word) => (
@@ -254,13 +321,6 @@ export function GameScreen({ room, onNavigate }: Props) {
               {outGroupsSection}
               {scoreboardSection}
 
-              {isHost && (
-                <div className="menu-item" onClick={() => onNavigate('wordSet')}>
-                  <span>Select Word Set</span>
-                  <span className="menu-item-arrow">{selectedSet?.name ?? room.wordSetName} ›</span>
-                </div>
-              )}
-
               {!isHost && (
                 <p className="section-label" style={{ marginTop: 16 }}>
                   Word Set: {room.wordSetName}
@@ -270,6 +330,16 @@ export function GameScreen({ room, onNavigate }: Props) {
               {idleRoundMessage && (
                 <div className={`round-banner ${room.myRole === 'inGroup' ? 'in-group' : 'out-group'}`}>
                   {idleRoundMessage}
+                </div>
+              )}
+
+              {isHost && (
+                <div className="menu-item menu-item-outlined" onClick={() => onNavigate('wordSet')}>
+                  <span>Select Word Set</span>
+                  <span className="menu-item-arrow">
+                    <span className="menu-item-value">{selectedSet?.name ?? room.wordSetName}</span>
+                    {' ›'}
+                  </span>
                 </div>
               )}
 
@@ -300,9 +370,15 @@ export function GameScreen({ room, onNavigate }: Props) {
                     </div>
                     {hostError && <p className="error-msg">{hostError}</p>}
                     {!canStartRound && (
-                      <p className="info-msg" style={{ fontSize: '0.85rem' }}>
-                        Shuffle groups before starting the next round — In Group needs at least {MIN_IN_GROUP_SIZE} players.
-                      </p>
+                      room.needsReshuffle ? (
+                        <p className="info-msg" style={{ fontSize: '0.85rem' }}>
+                          Adjust or shuffle groups before starting the next round.
+                        </p>
+                      ) : (
+                        <p className="error-msg">
+                          In Group needs at least {MIN_IN_GROUP_SIZE} players and every Out Group needs at least 1 player.
+                        </p>
+                      )
                     )}
                   </div>
                 ) : (
@@ -334,6 +410,58 @@ export function GameScreen({ room, onNavigate }: Props) {
             </button>
           </div>
         </Modal>
+      )}
+
+      {selectedPlayer && (
+        <Modal title={selectedPlayer.name} onClose={() => setSelectedPlayer(null)}>
+          <div className="player-action-menu">
+            {selectedPlayer.isInGroup &&
+              outGroups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  className="btn btn-full"
+                  onClick={() => handleMovePlayer(selectedPlayer.id, group.id)}
+                >
+                  Move to Out Group — Group {group.id + 1}
+                </button>
+              ))}
+            {!selectedPlayer.isInGroup && (
+              <button
+                type="button"
+                className="btn btn-full"
+                onClick={() => handleMovePlayer(selectedPlayer.id, 'inGroup')}
+              >
+                Move to In Group
+              </button>
+            )}
+            {!selectedPlayer.isHost && (
+              <button
+                type="button"
+                className="btn btn-danger btn-full"
+                onClick={() => {
+                  setRemoveConfirmPlayer(selectedPlayer);
+                  setSelectedPlayer(null);
+                }}
+              >
+                Remove Player
+              </button>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn" onClick={() => setSelectedPlayer(null)}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {removeConfirmPlayer && (
+        <ConfirmModal
+          message={`Are you sure you want to remove ${removeConfirmPlayer.name} from the game?`}
+          onConfirm={handleConfirmRemovePlayer}
+          onCancel={() => setRemoveConfirmPlayer(null)}
+        />
       )}
 
       {confirmAction === 'endRound' && (

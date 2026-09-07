@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateScores, assignGroups, resolveUniquePlayerName, hasGroupBelowMinSize } from './game.js';
-import type { RoomState, Player } from '../../shared/types.js';
+import { calculateScores, assignGroups, resolveUniquePlayerName, hasGroupBelowMinSize, movePlayerToGroup, assignJoinedPlayerToGroup } from './game.js';
+import type { RoomState, Player, Group } from '../../shared/types.js';
 
 function makePlayer(id: string, guess: string | null): Player {
   return { id, name: id, score: 0, isHost: false, guess, roundPoints: 0 };
@@ -30,7 +30,7 @@ function makeRoom(
     players,
     groups,
     roundWords: [],
-    roundTimer: 0,
+    roundTimer: null,
     roundStartedAt: null,
     hostId: 'in0',
     waitingForHost: true,
@@ -111,6 +111,58 @@ describe('assignGroups', () => {
   it('rejects group counts that leave in group with fewer than 2 players', () => {
     const players = ['a', 'b', 'c'].map((id) => makePlayer(id, null));
     expect(() => assignGroups(players, 3)).toThrow(/In Group needs at least 2/);
+  });
+});
+
+describe('movePlayerToGroup', () => {
+  const groups: Group[] = [
+    { id: 0, playerIds: ['a', 'b'], isInGroup: true },
+    { id: 1, playerIds: ['c'], isInGroup: false },
+    { id: 2, playerIds: ['d'], isInGroup: false },
+  ];
+
+  it('moves a player from In Group to an Out Group', () => {
+    const result = movePlayerToGroup(groups, 'a', 1);
+    expect(result.error).toBeUndefined();
+    expect(result.groups.find((g) => g.isInGroup)?.playerIds).toEqual(['b']);
+    expect(result.groups.find((g) => g.id === 1)?.playerIds).toEqual(['c', 'a']);
+  });
+
+  it('moves a player from an Out Group to In Group', () => {
+    const result = movePlayerToGroup(groups, 'c', 'inGroup');
+    expect(result.error).toBeUndefined();
+    expect(result.groups.find((g) => g.isInGroup)?.playerIds).toEqual(['a', 'b', 'c']);
+    expect(result.groups.find((g) => g.id === 1)?.playerIds).toEqual([]);
+  });
+});
+
+describe('assignJoinedPlayerToGroup', () => {
+  it('fills In Group when it has fewer than 2 players', () => {
+    const groups: Group[] = [
+      { id: 0, playerIds: ['a'], isInGroup: true },
+      { id: 1, playerIds: ['b', 'c'], isInGroup: false },
+    ];
+    const next = assignJoinedPlayerToGroup(groups, 'd');
+    expect(next.find((g) => g.isInGroup)?.playerIds).toEqual(['a', 'd']);
+  });
+
+  it('fills an empty Out Group when In Group already has 2+', () => {
+    const groups: Group[] = [
+      { id: 0, playerIds: ['a', 'b'], isInGroup: true },
+      { id: 1, playerIds: ['c'], isInGroup: false },
+      { id: 2, playerIds: [], isInGroup: false },
+    ];
+    const next = assignJoinedPlayerToGroup(groups, 'd');
+    expect(next.find((g) => g.id === 2)?.playerIds).toEqual(['d']);
+  });
+
+  it('adds to In Group when all Out Groups are occupied', () => {
+    const groups: Group[] = [
+      { id: 0, playerIds: ['a', 'b'], isInGroup: true },
+      { id: 1, playerIds: ['c'], isInGroup: false },
+    ];
+    const next = assignJoinedPlayerToGroup(groups, 'd');
+    expect(next.find((g) => g.isInGroup)?.playerIds).toEqual(['a', 'b', 'd']);
   });
 });
 

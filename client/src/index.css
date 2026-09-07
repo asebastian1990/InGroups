@@ -413,32 +413,32 @@ body {
 .number-input-compact {
   flex: 0 0 auto;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   border: 1px solid var(--gray-300);
   background: var(--white);
-  padding: 0 6px;
+  padding: 0 4px;
   font-family: var(--font-sans);
   font-size: 0.85rem;
 }
 
 .number-input-compact button {
-  width: 26px;
-  height: 26px;
-  font-size: 1rem;
+  width: 22px;
+  height: 22px;
+  font-size: 0.85rem;
   flex-shrink: 0;
 }
 
 .number-input-compact .number-input-value {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   min-width: 1rem;
   text-align: center;
 }
 
 .number-input-compact .number-input-label {
-  font-size: 0.85rem;
-  font-family: var(--font-sans);
-  font-weight: 400;
+  font-size: 1rem;
+  font-family: var(--font-serif);
+  font-weight: 500;
   color: var(--dark);
   white-space: nowrap;
 }
@@ -537,6 +537,18 @@ body {
   font-family: var(--font-sans);
 }
 
+.menu-item-value {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--dark);
+}
+
+.menu-item-outlined {
+  padding: 14px 16px;
+  border: 1px solid var(--gray-300);
+  margin: 16px 0;
+}
+
 .player-list {
   list-style: none;
 }
@@ -547,6 +559,23 @@ body {
   gap: 10px;
   padding: 8px 0;
   font-size: 1rem;
+}
+
+.player-item-selectable {
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 0 -6px;
+  padding: 8px 6px;
+  transition: background 0.15s;
+}
+
+.player-item-selectable:hover {
+  background: var(--gray-100);
+}
+
+.player-item-selectable:focus-visible {
+  outline: 2px solid var(--brand-teal);
+  outline-offset: 1px;
 }
 
 .player-icon {
@@ -641,13 +670,60 @@ body {
   border-left-color: var(--brand-orange);
 }
 
-.timer {
-  font-family: var(--font-sans);
-  font-size: 1.1rem;
-  font-weight: 500;
+.thoughtful-prompts {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--gray-100);
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.thoughtful-prompts-bar {
+  position: relative;
+  width: 3px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.thoughtful-prompts-bar-base,
+.thoughtful-prompts-bar-wipe {
+  position: absolute;
+  inset: 0;
+}
+
+.thoughtful-prompts-bar-wipe {
+  animation: thoughtful-accent-wipe 0.55s ease-out forwards;
+}
+
+@keyframes thoughtful-accent-wipe {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.thoughtful-prompts-text {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
   color: var(--gray-600);
-  text-align: center;
-  margin: 8px 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thoughtful-prompts-text.is-visible {
+  opacity: 1;
 }
 
 .modal-overlay {
@@ -690,6 +766,12 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 20px;
+}
+
+.player-action-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .error-msg {

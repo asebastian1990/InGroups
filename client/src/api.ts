@@ -62,25 +62,37 @@ function resetSocketEvents() {
 
 
 export function isGuestMode(): boolean {
-  return localStorage.getItem(GUEST_FLAG) === '1';
+  if (sessionStorage.getItem(GUEST_FLAG) === '1') return true;
+  if (localStorage.getItem(GUEST_FLAG) === '1') {
+    sessionStorage.setItem(GUEST_FLAG, '1');
+    localStorage.removeItem(GUEST_FLAG);
+    localStorage.removeItem(GUEST_ID_KEY);
+    return true;
+  }
+  return false;
 }
 
 function getGuestId(): string {
-  let id = localStorage.getItem(GUEST_ID_KEY);
+  let id = sessionStorage.getItem(GUEST_ID_KEY);
   if (!id || !id.startsWith('guest_')) {
     id = `guest_${crypto.randomUUID()}`;
-    localStorage.setItem(GUEST_ID_KEY, id);
+    sessionStorage.setItem(GUEST_ID_KEY, id);
   }
   return id;
 }
 
 export function enableGuestMode(): void {
   getGuestId();
-  localStorage.setItem(GUEST_FLAG, '1');
+  sessionStorage.setItem(GUEST_FLAG, '1');
+  localStorage.removeItem(GUEST_FLAG);
+  localStorage.removeItem(GUEST_ID_KEY);
 }
 
 export function clearGuestMode(): void {
+  sessionStorage.removeItem(GUEST_FLAG);
+  sessionStorage.removeItem(GUEST_ID_KEY);
   localStorage.removeItem(GUEST_FLAG);
+  localStorage.removeItem(GUEST_ID_KEY);
 }
 
 export function exitGuestMode(): void {
@@ -573,6 +585,55 @@ export function resetScores() {
 
   getSocket().emit('resetScores');
 
+}
+
+
+
+export function removePlayer(playerId: string): Promise<{ success: boolean; error?: string }> {
+  return ensureSocket().then(
+    (s) =>
+      new Promise((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Request timeout — is the game server running the latest version?')),
+          ACK_TIMEOUT_MS
+        );
+        s.emit('removePlayer', { playerId }, (res: { success: boolean; error?: string } | undefined) => {
+          clearTimeout(timeout);
+          if (!res) {
+            reject(new Error('Request timeout — is the game server running the latest version?'));
+            return;
+          }
+          resolve(res);
+        });
+      })
+  );
+}
+
+export function movePlayer(
+  playerId: string,
+  destination: 'inGroup' | number
+): Promise<{ success: boolean; error?: string }> {
+  return ensureSocket().then(
+    (s) =>
+      new Promise((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Request timeout — is the game server running the latest version?')),
+          ACK_TIMEOUT_MS
+        );
+        const payload =
+          destination === 'inGroup'
+            ? { playerId, destination: 'inGroup' as const }
+            : { playerId, outGroupId: destination };
+        s.emit('movePlayer', payload, (res: { success: boolean; error?: string } | undefined) => {
+          clearTimeout(timeout);
+          if (!res) {
+            reject(new Error('Request timeout — is the game server running the latest version?'));
+            return;
+          }
+          resolve(res);
+        });
+      })
+  );
 }
 
 
