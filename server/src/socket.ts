@@ -12,6 +12,10 @@ import {
   selectRoundWords,
   calculateScores,
   allPlayersGuessed,
+  getRemainingTime,
+  isRoundExpired,
+  shuffleWordsForPlayer,
+  clampRoundDurationMinutes,
 } from './game.js';
 import {
   getWordSets,
@@ -28,6 +32,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const rooms = new Map<string, RoomState>();
 const playerRooms = new Map<string, string>();
+const roundTimers = new Map<string, ReturnType<typeof setInterval>>();
 const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const DISCONNECT_GRACE_MS = 45_000;
@@ -67,6 +72,11 @@ function toClientState(room: RoomState, playerId: string): ClientRoomState {
     isInGroup: room.groups.find((g) => g.playerIds.includes(p.id))?.isInGroup ?? false,
   }));
 
+  const roundWords =
+    room.phase === 'playing' && room.roundStartedAt && room.roundWords.length > 0
+      ? shuffleWordsForPlayer(room.roundWords, room.code, room.roundStartedAt, playerId)
+      : room.roundWords;
+
   return {
     code: room.code,
     phase: room.phase,
@@ -75,8 +85,9 @@ function toClientState(room: RoomState, playerId: string): ClientRoomState {
     wordSetName: room.wordSetName,
     players,
     groups: room.groups,
-    roundWords: room.roundWords,
+    roundWords,
     roundTimer: room.roundTimer,
+    roundDurationMinutes: room.roundDurationMinutes,
     hostId: room.hostId,
     waitingForHost: room.waitingForHost,
     myPlayerId: playerId,
@@ -86,6 +97,14 @@ function toClientState(room: RoomState, playerId: string): ClientRoomState {
     needsReshuffle: room.needsReshuffle ?? false,
     roundNotice: room.roundNotice ?? null,
   };
+}
+
+function clearRoundTimer(code: string) {
+  const timer = roundTimers.get(code);
+  if (timer) {
+    clearInterval(timer);
+    roundTimers.delete(code);
+  }
 }
 
 function broadcastRoom(io: Server, room: RoomState) {
@@ -109,6 +128,7 @@ function getRoomForPlayer(playerId: string | null): RoomState | undefined {
 }
 
 function closeRoom(io: Server, room: RoomState, reason: string) {
+  clearRoundTimer(room.code);
   io.to(room.code).emit('gameClosed', { reason });
   for (const player of room.players) {
     playerRooms.delete(player.id);
@@ -124,6 +144,7 @@ function removePlayerFromRoom(io: Server, room: RoomState, playerId: string) {
   }
   playerRooms.delete(playerId);
   if (room.players.length === 0) {
+    clearRoundTimer(room.code);
     rooms.delete(room.code);
     return;
   }
@@ -148,6 +169,7 @@ function kickPlayerFromRoom(io: Server, room: RoomState, playerId: string, reaso
 }
 
 function abortRoundNoScore(io: Server, room: RoomState) {
+  clearRoundTimer(room.code);
   room.players.forEach((p) => {
     p.guess = null;
     p.roundPoints = 0;
@@ -164,6 +186,7 @@ function abortRoundNoScore(io: Server, room: RoomState) {
 }
 
 function endRound(io: Server, room: RoomState) {
+  clearRoundTimer(room.code);
   const points = calculateScores(room);
   room.players.forEach((p) => {
     const pts = points.get(p.id) ?? 0;
@@ -176,6 +199,26 @@ function endRound(io: Server, room: RoomState) {
   room.waitingForHost = true;
   room.roundNotice = null;
   broadcastRoom(io, room);
+}
+
+function startRoundTimer(io: Server, room: RoomState) {
+  clearRoundTimer(room.code);
+  if (room.roundDurationMinutes <= 0) return;
+
+  const timer = setInterval(() => {
+    const currentRoom = rooms.get(room.code);
+    if (!currentRoom || currentRoom.phase !== 'playing') {
+      clearRoundTimer(room.code);
+      return;
+    }
+    currentRoom.roundTimer = getRemainingTime(currentRoom);
+    if (isRoundExpired(currentRoom) || allPlayersGuessed(currentRoom)) {
+      endRound(io, currentRoom);
+    } else {
+      broadcastRoom(io, currentRoom);
+    }
+  }, 1000);
+  roundTimers.set(room.code, timer);
 }
 
 export function setupSocketHandlers(io: Server) {
@@ -285,9 +328,10 @@ export function setupSocketHandlers(io: Server) {
       cb({ success: true, room: toClientState(room, playerId) });
     });
 
-    socket.on('updateSettings', ({ numGroups, wordSetId, wordSetName }) => {
+    socket.on('updateSettings', ({ numGroups, wordSetId, wordSetName, roundDurationMinutes }) => {
       const room = getRoomForPlayer(currentPlayerId);
       if (!room || room.hostId !== currentPlayerId) return;
+      if (room.phase === 'playing') return;
       if (numGroups !== undefined) {
         const val = Math.max(2, numGroups);
         if (validateGroupCount(room.players.length, val)) return;
@@ -295,6 +339,9 @@ export function setupSocketHandlers(io: Server) {
       }
       if (wordSetId) room.wordSetId = wordSetId;
       if (wordSetName) room.wordSetName = wordSetName;
+      if (roundDurationMinutes !== undefined) {
+        room.roundDurationMinutes = clampRoundDurationMinutes(roundDurationMinutes);
+      }
       broadcastRoom(io, room);
     });
 
@@ -324,12 +371,13 @@ export function setupSocketHandlers(io: Server) {
       room.roundWords = selectRoundWords(room.wordSetId, customWords ?? undefined);
       room.phase = 'playing';
       room.chatMessages = [];
-      room.roundStartedAt = null;
-      room.roundTimer = null;
+      room.roundStartedAt = Date.now();
+      room.roundTimer = getRemainingTime(room);
       room.waitingForHost = false;
       room.needsReshuffle = false;
       room.roundNotice = null;
       broadcastRoom(io, room);
+      startRoundTimer(io, room);
     });
 
     socket.on('endRound', () => {

@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { calculateScores, assignGroups, resolveUniquePlayerName, hasGroupBelowMinSize, movePlayerToGroup, assignJoinedPlayerToGroup } from './game.js';
+import {
+  calculateScores,
+  assignGroups,
+  resolveUniquePlayerName,
+  hasGroupBelowMinSize,
+  movePlayerToGroup,
+  assignJoinedPlayerToGroup,
+  getRemainingTime,
+  isRoundExpired,
+  shuffleWordsForPlayer,
+  clampRoundDurationMinutes,
+} from './game.js';
 import type { RoomState, Player, Group } from '../../shared/types.js';
 
 function makePlayer(id: string, guess: string | null): Player {
@@ -32,6 +43,7 @@ function makeRoom(
     roundWords: [],
     roundTimer: null,
     roundStartedAt: null,
+    roundDurationMinutes: 0,
     hostId: 'in0',
     waitingForHost: true,
     chatMessages: [],
@@ -163,6 +175,71 @@ describe('assignJoinedPlayerToGroup', () => {
     ];
     const next = assignJoinedPlayerToGroup(groups, 'd');
     expect(next.find((g) => g.isInGroup)?.playerIds).toEqual(['a', 'b', 'd']);
+  });
+});
+
+describe('clampRoundDurationMinutes', () => {
+  it('clamps to 0–15', () => {
+    expect(clampRoundDurationMinutes(-1)).toBe(0);
+    expect(clampRoundDurationMinutes(0)).toBe(0);
+    expect(clampRoundDurationMinutes(5)).toBe(5);
+    expect(clampRoundDurationMinutes(15)).toBe(15);
+    expect(clampRoundDurationMinutes(99)).toBe(15);
+  });
+});
+
+describe('getRemainingTime', () => {
+  it('returns null when timer is off', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.roundDurationMinutes = 0;
+    expect(getRemainingTime(room)).toBeNull();
+  });
+
+  it('returns full duration before round starts', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.roundDurationMinutes = 5;
+    expect(getRemainingTime(room)).toBe(300);
+  });
+
+  it('counts down after round start', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.roundDurationMinutes = 2;
+    room.roundStartedAt = Date.now() - 30_000;
+    expect(getRemainingTime(room)).toBe(90);
+  });
+});
+
+describe('isRoundExpired', () => {
+  it('is false when timer is off', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.roundDurationMinutes = 0;
+    expect(isRoundExpired(room)).toBe(false);
+  });
+
+  it('is true when time has elapsed', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.roundDurationMinutes = 1;
+    room.roundStartedAt = Date.now() - 61_000;
+    expect(isRoundExpired(room)).toBe(true);
+  });
+});
+
+describe('shuffleWordsForPlayer', () => {
+  const words = ['A', 'B', 'C', 'D', 'E'];
+
+  it('returns the same words in a stable order per player', () => {
+    const a = shuffleWordsForPlayer(words, 'ABCD', 12345, 'player-a');
+    const b = shuffleWordsForPlayer(words, 'ABCD', 12345, 'player-b');
+    expect([...a].sort()).toEqual(words);
+    expect([...b].sort()).toEqual(words);
+    expect(a).toEqual(shuffleWordsForPlayer(words, 'ABCD', 12345, 'player-a'));
+    expect(a).not.toEqual(b);
+  });
+
+  it('changes order when the round changes', () => {
+    const roundOne = shuffleWordsForPlayer(words, 'ABCD', 111, 'player-a');
+    const roundTwo = shuffleWordsForPlayer(words, 'ABCD', 222, 'player-a');
+    expect(roundOne).not.toEqual(roundTwo);
   });
 });
 

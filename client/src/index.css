@@ -692,6 +692,32 @@ body {
   border-left-color: var(--brand-orange);
 }
 
+.number-input-compact .number-input-value-timer {
+  min-width: 2rem;
+}
+
+.host-controls-row-timer {
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.host-controls-row-timer .number-input-compact {
+  padding: 0 12px 0 4px;
+}
+
+.host-controls-row-timer .number-input-label {
+  padding-right: 2px;
+}
+
+.timer {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-align: center;
+  margin: 8px 0;
+}
+
 .thoughtful-prompts {
   display: flex;
   align-items: stretch;

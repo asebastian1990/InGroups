@@ -510,7 +510,12 @@ export function leaveGame(playerId: string, roomCode: string): void {
 
 
 
-export function updateSettings(settings: { numGroups?: number; wordSetId?: string; wordSetName?: string }) {
+export function updateSettings(settings: {
+  numGroups?: number;
+  wordSetId?: string;
+  wordSetName?: string;
+  roundDurationMinutes?: number;
+}) {
 
   getSocket().emit('updateSettings', settings);
 

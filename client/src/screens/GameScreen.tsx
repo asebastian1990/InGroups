@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ClientRoomState, ClientPlayer, WordSet } from '@shared/types';
-import { MIN_IN_GROUP_SIZE } from '@shared/types';
+import { MIN_IN_GROUP_SIZE, MAX_ROUND_DURATION_MINUTES, MIN_ROUND_DURATION_MINUTES } from '@shared/types';
 import {
   startRound,
   endRound,
@@ -19,6 +19,12 @@ import { ThoughtfulPrompts } from '../components/ThoughtfulPrompts';
 interface Props {
   room: ClientRoomState;
   onNavigate: (screen: string) => void;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function PlayerRow({
@@ -163,6 +169,18 @@ export function GameScreen({ room, onNavigate }: Props) {
     updateSettings({ numGroups: val });
   };
 
+  const adjustRoundDuration = (delta: number) => {
+    const current = room.roundDurationMinutes ?? 0;
+    let next = current + delta;
+    if (next < MIN_ROUND_DURATION_MINUTES) next = MAX_ROUND_DURATION_MINUTES;
+    if (next > MAX_ROUND_DURATION_MINUTES) next = MIN_ROUND_DURATION_MINUTES;
+    setHostError('');
+    updateSettings({ roundDurationMinutes: next });
+  };
+
+  const timerLabel =
+    (room.roundDurationMinutes ?? 0) === 0 ? 'Off' : String(room.roundDurationMinutes);
+
   const handleShuffleGroups = async () => {
     setInGroupOpen(true);
     setOutGroupsOpen(true);
@@ -286,6 +304,10 @@ export function GameScreen({ room, onNavigate }: Props) {
 
               {room.myRole === 'inGroup' && <ThoughtfulPrompts />}
 
+              {room.roundTimer !== null && (
+                <div className="timer">{formatTime(room.roundTimer)}</div>
+              )}
+
               <div className="word-grid">
                 {room.roundWords.map((word) => (
                   <button
@@ -346,6 +368,18 @@ export function GameScreen({ room, onNavigate }: Props) {
               <div style={{ marginTop: 20 }}>
                 {isHost ? (
                   <div className="host-controls">
+                    <div className="host-controls-row host-controls-row-timer">
+                      <div className="number-input number-input-compact">
+                        <button type="button" onClick={() => adjustRoundDuration(-1)}>
+                          −
+                        </button>
+                        <span className="number-input-value number-input-value-timer">{timerLabel}</span>
+                        <button type="button" onClick={() => adjustRoundDuration(1)}>
+                          +
+                        </button>
+                        <span className="number-input-label">Timer (Minutes)</span>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       className="btn btn-primary btn-full"

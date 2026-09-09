@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Group, Player, RoomState } from '../../shared/types.js';
-import { FREE_WORD_SETS, MIN_IN_GROUP_SIZE, MIN_PLAYERS } from '../../shared/types.js';
+import { FREE_WORD_SETS, MIN_IN_GROUP_SIZE, MIN_PLAYERS, MAX_ROUND_DURATION_MINUTES, MIN_ROUND_DURATION_MINUTES } from '../../shared/types.js';
 
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -33,6 +33,7 @@ export function createRoom(hostName: string, hostId: string): RoomState {
     roundWords: [],
     roundTimer: null,
     roundStartedAt: null,
+    roundDurationMinutes: 0,
     hostId,
     waitingForHost: true,
     chatMessages: [],
@@ -48,6 +49,69 @@ export function shuffleArray<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function hashSeed(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state += 0x6d2b79f5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function shuffleArraySeeded<T>(arr: T[], seed: string): T[] {
+  const a = [...arr];
+  const random = mulberry32(hashSeed(seed));
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Per-player word order — same words, stable shuffle per player for the round. */
+export function shuffleWordsForPlayer(
+  words: string[],
+  roomCode: string,
+  roundStartedAt: number,
+  playerId: string
+): string[] {
+  if (words.length === 0) return words;
+  return shuffleArraySeeded(words, `${roomCode}:${roundStartedAt}:${playerId}`);
+}
+
+export function clampRoundDurationMinutes(minutes: number): number {
+  const rounded = Math.round(minutes);
+  return Math.min(MAX_ROUND_DURATION_MINUTES, Math.max(MIN_ROUND_DURATION_MINUTES, rounded));
+}
+
+export function getRoundDurationSeconds(room: RoomState): number {
+  return room.roundDurationMinutes > 0 ? room.roundDurationMinutes * 60 : 0;
+}
+
+export function getRemainingTime(room: RoomState): number | null {
+  const durationSeconds = getRoundDurationSeconds(room);
+  if (durationSeconds === 0) return null;
+  if (!room.roundStartedAt) return durationSeconds;
+  const elapsed = Math.floor((Date.now() - room.roundStartedAt) / 1000);
+  return Math.max(0, durationSeconds - elapsed);
+}
+
+export function isRoundExpired(room: RoomState): boolean {
+  const remaining = getRemainingTime(room);
+  return remaining !== null && remaining <= 0;
 }
 
 export function hasGroupBelowMinSize(groups: Group[]): boolean {

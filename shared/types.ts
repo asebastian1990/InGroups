@@ -40,6 +40,8 @@ export interface RoomState {
   roundWords: string[];
   roundTimer: number | null;
   roundStartedAt: number | null;
+  /** 0 = no timer; 1–15 = round length in minutes. Host sets between rounds. */
+  roundDurationMinutes: number;
   hostId: string;
   waitingForHost: boolean;
   chatMessages: ChatMessage[];
@@ -59,6 +61,11 @@ export interface WordSet {
 export interface LicenseInfo {
   key: string;
 }
+
+/** Round timer: 0 = off; 1–15 = minutes per round. */
+export const MIN_ROUND_DURATION_MINUTES = 0;
+export const MAX_ROUND_DURATION_MINUTES = 15;
+export const DEFAULT_ROUND_DURATION_MINUTES = 0;
 
 /** One-time license purchase — unlocks premium word sets for one account. */
 export const LICENSE_UNIT_PRICE_CENTS = 4900;
@@ -94,6 +101,7 @@ export interface ClientRoomState {
   groups: Group[];
   roundWords: string[];
   roundTimer: number | null;
+  roundDurationMinutes: number;
   hostId: string;
   waitingForHost: boolean;
   myPlayerId: string;
