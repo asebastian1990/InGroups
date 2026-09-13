@@ -10,12 +10,23 @@ import {
   movePlayerToGroup,
   assignJoinedPlayerToGroup,
   selectRoundWords,
-  calculateScores,
   allPlayersGuessed,
   getRemainingTime,
   isRoundExpired,
   shuffleWordsForPlayer,
   clampRoundDurationMinutes,
+  clampWinConditionPoints,
+  allInGroupGuessed,
+  allOutGroupGuessed,
+  getOutGroupRemainingTime,
+  isOutGroupPhaseExpired,
+  usesSplitTimer,
+  canPlayerSubmitGuess,
+  computeActiveSpeedBonus,
+  applyRoundScores,
+  shouldEndGame,
+  getWinnerIds,
+  transitionToOutGroupPhase,
 } from './game.js';
 import {
   getWordSets,
@@ -96,6 +107,12 @@ function toClientState(room: RoomState, playerId: string): ClientRoomState {
     chatMessages: room.chatMessages,
     needsReshuffle: room.needsReshuffle ?? false,
     roundNotice: room.roundNotice ?? null,
+    winConditionPoints: room.winConditionPoints,
+    inGroupSpeedBonus: room.inGroupSpeedBonus,
+    roundPhase: room.roundPhase,
+    outGroupTimer: room.outGroupTimer,
+    activeSpeedBonus: computeActiveSpeedBonus(room),
+    winnerIds: room.phase === 'finished' ? getWinnerIds(room) : [],
   };
 }
 
@@ -173,32 +190,82 @@ function abortRoundNoScore(io: Server, room: RoomState) {
   room.players.forEach((p) => {
     p.guess = null;
     p.roundPoints = 0;
+    p.roundSpeedBonus = 0;
   });
   room.phase = 'roundEnd';
   room.roundTimer = null;
   room.roundWords = [];
   room.chatMessages = [];
   room.roundStartedAt = null;
+  room.roundPhase = 'inGroup';
+  room.outGroupTimer = null;
+  room.outGroupStartedAt = null;
+  room.roundDurationSecondsAtStart = null;
+  room.inGroupTimerRemainingAtLock = null;
   room.waitingForHost = true;
   room.needsReshuffle = true;
   room.roundNotice = 'Round ended — a player left. No points awarded. Shuffle groups before starting the next round.';
   broadcastRoom(io, room);
 }
 
-function endRound(io: Server, room: RoomState) {
-  clearRoundTimer(room.code);
-  const points = calculateScores(room);
-  room.players.forEach((p) => {
-    const pts = points.get(p.id) ?? 0;
-    p.roundPoints = pts;
-    p.score += pts;
-  });
-  room.phase = 'roundEnd';
+function resetRoundTimerFields(room: RoomState) {
   room.roundTimer = null;
   room.roundStartedAt = null;
+  room.roundPhase = 'inGroup';
+  room.outGroupTimer = null;
+  room.outGroupStartedAt = null;
+  room.roundDurationSecondsAtStart = null;
+  room.inGroupTimerRemainingAtLock = null;
+}
+
+function endRound(io: Server, room: RoomState) {
+  clearRoundTimer(room.code);
+  const { basePoints, speedBonuses } = applyRoundScores(room);
+  room.players.forEach((p) => {
+    const base = basePoints.get(p.id) ?? 0;
+    const bonus = speedBonuses.get(p.id) ?? 0;
+    p.roundPoints = base;
+    p.roundSpeedBonus = bonus;
+    p.score += base + bonus;
+  });
+  resetRoundTimerFields(room);
   room.waitingForHost = true;
   room.roundNotice = null;
+  if (shouldEndGame(room)) {
+    room.phase = 'finished';
+  } else {
+    room.phase = 'roundEnd';
+  }
   broadcastRoom(io, room);
+}
+
+function checkRoundCompletion(io: Server, room: RoomState) {
+  if (!usesSplitTimer(room)) {
+    if (allPlayersGuessed(room)) {
+      endRound(io, room);
+    } else {
+      broadcastRoom(io, room);
+    }
+    return;
+  }
+
+  if (room.roundPhase === 'inGroup') {
+    if (isRoundExpired(room)) {
+      endRound(io, room);
+    } else if (allInGroupGuessed(room)) {
+      transitionToOutGroupPhase(room);
+      broadcastRoom(io, room);
+    } else {
+      broadcastRoom(io, room);
+    }
+    return;
+  }
+
+  if (isOutGroupPhaseExpired(room) || allOutGroupGuessed(room)) {
+    endRound(io, room);
+  } else {
+    broadcastRoom(io, room);
+  }
 }
 
 function startRoundTimer(io: Server, room: RoomState) {
@@ -211,12 +278,27 @@ function startRoundTimer(io: Server, room: RoomState) {
       clearRoundTimer(room.code);
       return;
     }
-    currentRoom.roundTimer = getRemainingTime(currentRoom);
-    if (isRoundExpired(currentRoom) || allPlayersGuessed(currentRoom)) {
-      endRound(io, currentRoom);
+
+    if (currentRoom.roundPhase === 'inGroup') {
+      currentRoom.roundTimer = getRemainingTime(currentRoom);
+      if (isRoundExpired(currentRoom)) {
+        endRound(io, currentRoom);
+        return;
+      }
+      if (allInGroupGuessed(currentRoom)) {
+        transitionToOutGroupPhase(currentRoom);
+        broadcastRoom(io, currentRoom);
+        return;
+      }
     } else {
-      broadcastRoom(io, currentRoom);
+      currentRoom.outGroupTimer = getOutGroupRemainingTime(currentRoom);
+      if (isOutGroupPhaseExpired(currentRoom) || allOutGroupGuessed(currentRoom)) {
+        endRound(io, currentRoom);
+        return;
+      }
     }
+
+    broadcastRoom(io, currentRoom);
   }, 1000);
   roundTimers.set(room.code, timer);
 }
@@ -261,7 +343,7 @@ export function setupSocketHandlers(io: Server) {
         cb({ success: false, error: 'Room not found' });
         return;
       }
-      if (room.phase !== 'lobby' && room.phase !== 'roundEnd') {
+      if (room.phase !== 'lobby' && room.phase !== 'roundEnd' && room.phase !== 'finished') {
         cb({ success: false, error: 'Game already in progress' });
         return;
       }
@@ -293,6 +375,7 @@ export function setupSocketHandlers(io: Server) {
         isHost: false,
         guess: null,
         roundPoints: 0,
+        roundSpeedBonus: 0,
       });
       if (room.groups.length > 0) {
         room.groups = assignJoinedPlayerToGroup(room.groups, playerId);
@@ -328,7 +411,7 @@ export function setupSocketHandlers(io: Server) {
       cb({ success: true, room: toClientState(room, playerId) });
     });
 
-    socket.on('updateSettings', ({ numGroups, wordSetId, wordSetName, roundDurationMinutes }) => {
+    socket.on('updateSettings', ({ numGroups, wordSetId, wordSetName, roundDurationMinutes, winConditionPoints, inGroupSpeedBonus }) => {
       const room = getRoomForPlayer(currentPlayerId);
       if (!room || room.hostId !== currentPlayerId) return;
       if (room.phase === 'playing') return;
@@ -340,7 +423,19 @@ export function setupSocketHandlers(io: Server) {
       if (wordSetId) room.wordSetId = wordSetId;
       if (wordSetName) room.wordSetName = wordSetName;
       if (roundDurationMinutes !== undefined) {
+        const prevDuration = room.roundDurationMinutes;
         room.roundDurationMinutes = clampRoundDurationMinutes(roundDurationMinutes);
+        if (room.roundDurationMinutes <= 0) {
+          room.inGroupSpeedBonus = false;
+        } else if (prevDuration <= 0) {
+          room.inGroupSpeedBonus = true;
+        }
+      }
+      if (winConditionPoints !== undefined && room.groups.length === 0) {
+        room.winConditionPoints = clampWinConditionPoints(winConditionPoints);
+      }
+      if (inGroupSpeedBonus !== undefined && room.roundDurationMinutes > 0) {
+        room.inGroupSpeedBonus = !!inGroupSpeedBonus;
       }
       broadcastRoom(io, room);
     });
@@ -362,16 +457,24 @@ export function setupSocketHandlers(io: Server) {
     socket.on('startRound', async () => {
       const room = getRoomForPlayer(currentPlayerId);
       if (!room || room.hostId !== currentPlayerId) return;
+      if (room.phase === 'finished') return;
       if (room.needsReshuffle || hasGroupBelowMinSize(room.groups)) return;
       room.players.forEach((p) => {
         p.guess = null;
         p.roundPoints = 0;
+        p.roundSpeedBonus = 0;
       });
       const customWords = await getWordSetWords(room.wordSetId, room.hostId);
       room.roundWords = selectRoundWords(room.wordSetId, customWords ?? undefined);
       room.phase = 'playing';
       room.chatMessages = [];
+      room.roundPhase = 'inGroup';
       room.roundStartedAt = Date.now();
+      room.roundDurationSecondsAtStart =
+        room.roundDurationMinutes > 0 ? room.roundDurationMinutes * 60 : null;
+      room.inGroupTimerRemainingAtLock = null;
+      room.outGroupStartedAt = null;
+      room.outGroupTimer = null;
       room.roundTimer = getRemainingTime(room);
       room.waitingForHost = false;
       room.needsReshuffle = false;
@@ -390,14 +493,11 @@ export function setupSocketHandlers(io: Server) {
     socket.on('submitGuess', ({ guess }: { guess: string | null }) => {
       const room = getRoomForPlayer(currentPlayerId);
       if (!room || room.phase !== 'playing' || !currentPlayerId) return;
+      if (!canPlayerSubmitGuess(room, currentPlayerId)) return;
       const player = room.players.find((p) => p.id === currentPlayerId);
       if (!player) return;
       player.guess = guess;
-      if (allPlayersGuessed(room)) {
-        endRound(io, room);
-      } else {
-        broadcastRoom(io, room);
-      }
+      checkRoundCompletion(io, room);
     });
 
     socket.on('sendChat', ({ text, playerId, roomCode }: { text: string; playerId: string; roomCode: string }) => {
@@ -475,7 +575,11 @@ export function setupSocketHandlers(io: Server) {
       room.players.forEach((p) => {
         p.score = 0;
         p.roundPoints = 0;
+        p.roundSpeedBonus = 0;
       });
+      if (room.phase === 'finished') {
+        room.phase = 'roundEnd';
+      }
       broadcastRoom(io, room);
     });
 

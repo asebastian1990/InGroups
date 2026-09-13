@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { ClientRoomState, ClientPlayer, WordSet } from '@shared/types';
-import { MIN_IN_GROUP_SIZE, MAX_ROUND_DURATION_MINUTES, MIN_ROUND_DURATION_MINUTES } from '@shared/types';
+import {
+  MIN_IN_GROUP_SIZE,
+  MAX_ROUND_DURATION_MINUTES,
+  MIN_ROUND_DURATION_MINUTES,
+  OUT_GROUP_PHASE_SECONDS,
+} from '@shared/types';
 import {
   startRound,
   endRound,
@@ -25,6 +30,12 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatRoundPoints(base: number, bonus: number): string {
+  if (base === 0 && bonus === 0) return '+0';
+  if (bonus > 0) return `+${base} (+${bonus})`;
+  return base > 0 ? `+${base}` : '+0';
 }
 
 function PlayerRow({
@@ -69,8 +80,8 @@ function PlayerRow({
         <span className="player-guess">{player.guess}</span>
       )}
       {showGuess && (
-        <span className={`player-points ${player.roundPoints > 0 ? 'positive' : ''}`}>
-          {player.roundPoints > 0 ? `+${player.roundPoints}` : '+0'}
+        <span className={`player-points ${player.roundPoints + player.roundSpeedBonus > 0 ? 'positive' : ''}`}>
+          {formatRoundPoints(player.roundPoints, player.roundSpeedBonus)}
         </span>
       )}
       {!showGuess && (
@@ -89,6 +100,7 @@ export function GameScreen({ room, onNavigate }: Props) {
   const [showRoomCode, setShowRoomCode] = useState(false);
   const [inGroupOpen, setInGroupOpen] = useState(true);
   const [outGroupsOpen, setOutGroupsOpen] = useState(true);
+  const [showSpeedBonusHelp, setShowSpeedBonusHelp] = useState(false);
   const isHost = room.myPlayerId === room.hostId;
 
   const maxGroups = Math.max(2, room.players.length - 1);
@@ -105,8 +117,17 @@ export function GameScreen({ room, onNavigate }: Props) {
 
   const isPlaying = room.phase === 'playing';
   const isRoundEnd = room.phase === 'roundEnd';
-  const showResults = isRoundEnd;
+  const isFinished = room.phase === 'finished';
+  const showResults = isRoundEnd || isFinished;
   const canManagePlayers = isHost && !isPlaying;
+  const timerActive = (room.roundDurationMinutes ?? 0) > 0;
+  const splitTimerRound = isPlaying && timerActive;
+  const canSubmitGuess =
+    isPlaying &&
+    (!splitTimerRound ||
+      (room.roundPhase === 'inGroup' && room.myRole === 'inGroup') ||
+      (room.roundPhase === 'outGroup' && room.myRole === 'outGroup'));
+  const isWinner = isFinished && room.winnerIds.includes(room.myPlayerId);
   const handleSelectPlayer = canManagePlayers ? setSelectedPlayer : undefined;
   const myGuess = room.players.find((p) => p.id === room.myPlayerId)?.guess ?? null;
 
@@ -175,7 +196,19 @@ export function GameScreen({ room, onNavigate }: Props) {
     if (next < MIN_ROUND_DURATION_MINUTES) next = MAX_ROUND_DURATION_MINUTES;
     if (next > MAX_ROUND_DURATION_MINUTES) next = MIN_ROUND_DURATION_MINUTES;
     setHostError('');
-    updateSettings({ roundDurationMinutes: next });
+    const settings: Parameters<typeof updateSettings>[0] = { roundDurationMinutes: next };
+    if (next === 0 && room.inGroupSpeedBonus) {
+      settings.inGroupSpeedBonus = false;
+    } else if (next > 0 && current === 0) {
+      settings.inGroupSpeedBonus = true;
+    }
+    updateSettings(settings);
+  };
+
+  const toggleSpeedBonus = () => {
+    if (!timerActive) return;
+    setHostError('');
+    updateSettings({ inGroupSpeedBonus: !room.inGroupSpeedBonus });
   };
 
   const timerLabel =
@@ -201,14 +234,38 @@ export function GameScreen({ room, onNavigate }: Props) {
     shiftGroups();
   };
 
-  const activeRoundMessage =
-    room.myRole === 'inGroup'
-      ? 'Round started. You are (IN GROUP). Try to align on one of the words below without tipping off the OUT GROUPS! Tap a word to lock in your guess.'
-      : 'Round started. You are (OUT GROUP). Observe the IN GROUP to see if you can guess their word! Tap a word to lock in your guess.';
+  const activeRoundMessage = (() => {
+    if (splitTimerRound && room.roundPhase === 'inGroup') {
+      if (room.myRole === 'inGroup') {
+        return 'You are (IN GROUP). Align on one word before the timer runs out! Tap a word to lock in your guess.';
+      }
+      return 'You are (OUT GROUP). Observe the IN GROUP — you will get a minute to choose once they all lock in.';
+    }
+    if (splitTimerRound && room.roundPhase === 'outGroup') {
+      if (room.myRole === 'outGroup') {
+        return 'You are (OUT GROUP). The IN GROUP has locked in — you have 1:00 to pick your guess!';
+      }
+      return 'You are (IN GROUP). You are locked in — wait for the OUT GROUPS to make their choices.';
+    }
+    if (room.myRole === 'inGroup') {
+      return 'Round started. You are (IN GROUP). Try to align on one of the words below without tipping off the OUT GROUPS! Tap a word to lock in your guess.';
+    }
+    return 'Round started. You are (OUT GROUP). Observe the IN GROUP to see if you can guess their word! Tap a word to lock in your guess.';
+  })();
 
-  const idleRoundMessage = isRoundEnd
-    ? room.roundNotice ?? 'Round over! All participants can discuss hints, guesses, stories, etc.'
-    : null;
+  const idleRoundMessage = isFinished
+    ? null
+    : isRoundEnd
+      ? room.roundNotice ?? 'Round over! All participants can discuss hints, guesses, stories, etc.'
+      : null;
+
+  const displayTimerSeconds = (() => {
+    if (!isPlaying || !timerActive) return null;
+    if (room.roundPhase === 'outGroup') {
+      return room.outGroupTimer ?? OUT_GROUP_PHASE_SECONDS;
+    }
+    return room.roundTimer;
+  })();
 
   const gameStarted = room.groups.length > 0;
   const selectedSet = wordSets.find((s) => s.id === room.wordSetId);
@@ -253,7 +310,7 @@ export function GameScreen({ room, onNavigate }: Props) {
   );
 
   const scoreboardSection = (
-    <Collapsible title="Scoreboard" defaultOpen={false}>
+    <Collapsible title="Scoreboard" defaultOpen={isFinished}>
       <ul className="player-list">
         {[...room.players]
           .sort((a, b) => b.score - a.score)
@@ -290,9 +347,43 @@ export function GameScreen({ room, onNavigate }: Props) {
     </button>
   );
 
+  const finishedScoreboard = (
+    <div className="final-scoreboard-panel">
+      <h3 className="final-scoreboard-title">Scoreboard</h3>
+      <ul className="player-list">
+        {[...room.players]
+          .sort((a, b) => b.score - a.score)
+          .map((p) => (
+            <PlayerRow
+              key={p.id}
+              player={p}
+              showGuess={false}
+              myPlayerId={room.myPlayerId}
+            />
+          ))}
+      </ul>
+      {isHost && (
+        <button
+          className="btn btn-danger"
+          style={{ marginTop: 12, fontSize: '0.85rem' }}
+          onClick={() => setConfirmAction('resetScores')}
+        >
+          Reset Scores
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      {gameStarted && (
+      {isFinished ? (
+        <>
+          <div className={`game-finished-banner ${isWinner ? 'winner' : 'loser'}`}>
+            {isWinner ? 'Congratulations! You Win!!' : 'Better luck next time...'}
+          </div>
+          {finishedScoreboard}
+        </>
+      ) : gameStarted && (
         <>
           {inGroupSection}
 
@@ -302,19 +393,25 @@ export function GameScreen({ room, onNavigate }: Props) {
                 {activeRoundMessage}
               </div>
 
-              {room.myRole === 'inGroup' && <ThoughtfulPrompts />}
+              {room.myRole === 'inGroup' && room.roundPhase === 'inGroup' && <ThoughtfulPrompts />}
 
-              {room.roundTimer !== null && (
-                <div className="timer">{formatTime(room.roundTimer)}</div>
+              {displayTimerSeconds !== null && (
+                <div className="timer-row">
+                  <div className="timer">{formatTime(displayTimerSeconds)}</div>
+                  {room.activeSpeedBonus !== null && room.activeSpeedBonus > 0 && room.roundPhase === 'inGroup' && (
+                    <span className="speed-bonus-badge">+{room.activeSpeedBonus} speed bonus</span>
+                  )}
+                </div>
               )}
 
-              <div className="word-grid">
+              <div className={`word-grid${!canSubmitGuess ? ' word-grid-disabled' : ''}`}>
                 {room.roundWords.map((word) => (
                   <button
                     key={word}
                     type="button"
                     className={`word-cell ${myGuess === word ? 'selected' : ''}`}
-                    onClick={() => handleWordClick(word)}
+                    onClick={() => canSubmitGuess && handleWordClick(word)}
+                    disabled={!canSubmitGuess}
                   >
                     {word}
                   </button>
@@ -355,7 +452,7 @@ export function GameScreen({ room, onNavigate }: Props) {
                 </div>
               )}
 
-              {isHost && (
+              {isHost && !isFinished && (
                 <div className="menu-item menu-item-outlined" onClick={() => onNavigate('wordSet')}>
                   <span>Select Word Set</span>
                   <span className="menu-item-arrow">
@@ -368,42 +465,72 @@ export function GameScreen({ room, onNavigate }: Props) {
               <div style={{ marginTop: 20 }}>
                 {isHost ? (
                   <div className="host-controls">
-                    <div className="host-controls-row host-controls-row-timer">
-                      <div className="number-input number-input-compact">
-                        <button type="button" onClick={() => adjustRoundDuration(-1)}>
-                          −
-                        </button>
-                        <span className="number-input-value number-input-value-timer">{timerLabel}</span>
-                        <button type="button" onClick={() => adjustRoundDuration(1)}>
-                          +
-                        </button>
-                        <span className="number-input-label">Timer (Minutes)</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-full"
-                      onClick={startRound}
-                      disabled={!canStartRound}
-                    >
-                      Start Round
-                    </button>
-                    <button type="button" className="btn btn-full" onClick={handleShiftGroups}>
-                      Shift Groups
-                    </button>
-                    <div className="host-controls-row">
-                      <button type="button" className="btn btn-shuffle" onClick={handleShuffleGroups}>
-                        Shuffle Groups
+                    {!isFinished && (
+                      <>
+                        <div className="host-controls-row host-controls-row-timer">
+                          <div className="number-input number-input-compact">
+                            <button type="button" onClick={() => adjustRoundDuration(-1)}>
+                              −
+                            </button>
+                            <span className="number-input-value number-input-value-timer">{timerLabel}</span>
+                            <button type="button" onClick={() => adjustRoundDuration(1)}>
+                              +
+                            </button>
+                            <span className="number-input-label">Timer (Minutes)</span>
+                          </div>
+                        </div>
+                        <div className={`speed-bonus-toggle${!timerActive ? ' speed-bonus-toggle-disabled' : ''}`}>
+                          <label className="toggle-label">
+                            <input
+                              type="checkbox"
+                              checked={room.inGroupSpeedBonus && timerActive}
+                              onChange={toggleSpeedBonus}
+                              disabled={!timerActive}
+                            />
+                            <span>In Group Speed Bonus</span>
+                          </label>
+                          <button
+                            type="button"
+                            className="help-icon-btn"
+                            aria-label="What is In Group Speed Bonus?"
+                            onClick={() => setShowSpeedBonusHelp(true)}
+                            disabled={!timerActive}
+                          >
+                            ?
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    {!isFinished && (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-full"
+                        onClick={startRound}
+                        disabled={!canStartRound}
+                      >
+                        Start Round
                       </button>
-                      <div className="number-input number-input-compact">
-                        <button type="button" onClick={() => handleNumGroupsChange(room.numGroups - 1)} disabled={room.numGroups <= 2}>−</button>
-                        <span className="number-input-value">{room.numGroups}</span>
-                        <button type="button" onClick={() => handleNumGroupsChange(room.numGroups + 1)} disabled={room.numGroups >= maxGroups}>+</button>
-                        <span className="number-input-label">Groups</span>
+                    )}
+                    {!isFinished && (
+                      <button type="button" className="btn btn-full" onClick={handleShiftGroups}>
+                        Change In Group
+                      </button>
+                    )}
+                    {!isFinished && (
+                      <div className="host-controls-row">
+                        <button type="button" className="btn btn-shuffle" onClick={handleShuffleGroups}>
+                          Shuffle Groups
+                        </button>
+                        <div className="number-input number-input-compact">
+                          <button type="button" onClick={() => handleNumGroupsChange(room.numGroups - 1)} disabled={room.numGroups <= 2}>−</button>
+                          <span className="number-input-value">{room.numGroups}</span>
+                          <button type="button" onClick={() => handleNumGroupsChange(room.numGroups + 1)} disabled={room.numGroups >= maxGroups}>+</button>
+                          <span className="number-input-label">Groups</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {hostError && <p className="error-msg">{hostError}</p>}
-                    {!canStartRound && (
+                    {!isFinished && !canStartRound && (
                       room.needsReshuffle ? (
                         <p className="info-msg" style={{ fontSize: '0.85rem' }}>
                           Adjust or shuffle groups before starting the next round.
@@ -417,11 +544,13 @@ export function GameScreen({ room, onNavigate }: Props) {
                   </div>
                 ) : (
                   <p className="waiting-msg">
-                    {room.needsReshuffle
-                      ? 'Waiting for host to shuffle groups…'
-                      : isRoundEnd
-                        ? 'Waiting for host to start next round…'
-                        : 'Waiting for host to start.'}
+                    {isFinished
+                      ? 'Game over!'
+                      : room.needsReshuffle
+                        ? 'Waiting for host to shuffle groups…'
+                        : isRoundEnd
+                          ? 'Waiting for host to start next round…'
+                          : 'Waiting for host to start.'}
                   </p>
                 )}
               </div>
@@ -512,6 +641,27 @@ export function GameScreen({ room, onNavigate }: Props) {
           onConfirm={handleConfirm}
           onCancel={() => setConfirmAction(null)}
         />
+      )}
+
+      {showSpeedBonusHelp && (
+        <Modal title="In Group Speed Bonus" onClose={() => setShowSpeedBonusHelp(false)}>
+          <p className="info-msg" style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
+            A bonus score modifier that applies if the In Group wins a round:
+          </p>
+          <ul className="speed-bonus-help-list">
+            <li>75%+ of timer remaining: +3 points</li>
+            <li>50%+ of timer remaining: +2 points</li>
+            <li>25%+ of timer remaining: +1 point</li>
+          </ul>
+          <p className="info-msg" style={{ fontSize: '0.85rem', marginTop: 12 }}>
+            Only applies when the In Group wins the round. Does not apply to Out Group scoring.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-primary" onClick={() => setShowSpeedBonusHelp(false)}>
+              Got it
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

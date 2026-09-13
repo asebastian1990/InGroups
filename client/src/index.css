@@ -246,6 +246,26 @@ body {
   color: var(--gray-600);
 }
 
+.header-help-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-400);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.header-help-btn:hover {
+  border-color: var(--brand-teal);
+  color: var(--brand-teal);
+}
+
 .exit-btn {
   background: none;
   border: none;
@@ -709,13 +729,132 @@ body {
   padding-right: 2px;
 }
 
+.timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
 .timer {
   font-family: var(--font-sans);
   font-size: 1.1rem;
   font-weight: 500;
   color: var(--gray-600);
   text-align: center;
-  margin: 8px 0;
+}
+
+.speed-bonus-badge {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--brand-teal);
+  background: rgba(0, 128, 128, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.word-grid-disabled .word-cell {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.win-condition-row {
+  margin-top: 12px;
+}
+
+.win-condition-readonly {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--gray-600);
+}
+
+.speed-bonus-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.speed-bonus-toggle-disabled {
+  opacity: 0.45;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.toggle-label input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-teal);
+}
+
+.help-icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-400);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.help-icon-btn:disabled {
+  cursor: not-allowed;
+}
+
+.speed-bonus-help-list {
+  margin: 12px 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.game-finished-banner {
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.game-finished-banner.winner {
+  background: rgba(0, 128, 128, 0.12);
+  color: var(--brand-teal);
+}
+
+.game-finished-banner.loser {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.final-scoreboard-panel {
+  background: var(--gray-100);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.final-scoreboard-title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--gray-800);
 }
 
 .thoughtful-prompts {

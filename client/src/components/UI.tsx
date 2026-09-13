@@ -85,14 +85,28 @@ export function HowToPlayModal({ onClose }: { onClose: () => void }) {
         <p><strong>Out Groups:</strong> Listen silently. Try to guess which word the In Group will choose.</p>
         <br />
         <p><strong>Scoring:</strong></p>
+        <p style={{ marginTop: 12 }}><strong>Out Groups score (checked first):</strong></p>
         <ul style={{ paddingLeft: 20, marginTop: 8 }}>
-          <li>All Out Group members guess the In Group's most popular word → +2 each</li>
-          <li>2+ In Group agree AND another group matches → +1 each in that group</li>
-          <li>All In Group choose the same word → +2 each</li>
-          <li>Some In Group agree → +1 each who matched</li>
+          <li>Every member of an Out Group guesses the In Group's most popular word → +2 each in that Out Group</li>
+          <li>At least as many members of an Out Group guess the In Group's most popular word → +1 each in that Out Group</li>
+        </ul>
+        <p style={{ marginTop: 12 }}><strong>In Group scores</strong> (only if no Out Group scored):</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li>All In Group members choose the same word → +2 each</li>
+          <li>2+ In Group members agree on a word, but not all → +1 each</li>
         </ul>
         <br />
         <p>Rounds end when everyone locks in a guess, when the timer runs out, or when the host ends the round early.</p>
+        <br />
+        <p><strong>Timer (optional):</strong> The host can turn on a round timer between rounds. When active, the In Group gets the full timer to align on a word. Once every In Group member locks in, each Out Group gets one minute to choose.</p>
+        <br />
+        <p><strong>In Group Speed Bonus (optional):</strong> When the timer is on, the host can enable a bonus for In Group wins based on how much time remains when the In Group locks in:</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li>75%+ of timer remaining → +3 points</li>
+          <li>50%+ of timer remaining → +2 points</li>
+          <li>25%+ of timer remaining → +1 point</li>
+        </ul>
+        <p style={{ marginTop: 8 }}>The bonus only applies when the In Group wins the round — not to Out Group scoring.</p>
       </div>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={onClose}>Got it</button>

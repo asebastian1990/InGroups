@@ -10,11 +10,18 @@ import {
   isRoundExpired,
   shuffleWordsForPlayer,
   clampRoundDurationMinutes,
+  clampWinConditionPoints,
+  computeSpeedBonusTier,
+  applyRoundScores,
+  shouldEndGame,
+  getWinnerIds,
+  allInGroupGuessed,
+  transitionToOutGroupPhase,
 } from './game.js';
 import type { RoomState, Player, Group } from '../../shared/types.js';
 
 function makePlayer(id: string, guess: string | null): Player {
-  return { id, name: id, score: 0, isHost: false, guess, roundPoints: 0 };
+  return { id, name: id, score: 0, isHost: false, guess, roundPoints: 0, roundSpeedBonus: 0 };
 }
 
 function makeRoom(
@@ -49,6 +56,13 @@ function makeRoom(
     chatMessages: [],
     needsReshuffle: false,
     roundNotice: null,
+    winConditionPoints: 10,
+    inGroupSpeedBonus: false,
+    roundPhase: 'inGroup',
+    outGroupTimer: null,
+    outGroupStartedAt: null,
+    roundDurationSecondsAtStart: null,
+    inGroupTimerRemainingAtLock: null,
   };
 }
 
@@ -243,6 +257,96 @@ describe('shuffleWordsForPlayer', () => {
   });
 });
 
+describe('clampWinConditionPoints', () => {
+  it('clamps to 0–100', () => {
+    expect(clampWinConditionPoints(-1)).toBe(0);
+    expect(clampWinConditionPoints(0)).toBe(0);
+    expect(clampWinConditionPoints(10)).toBe(10);
+    expect(clampWinConditionPoints(100)).toBe(100);
+    expect(clampWinConditionPoints(101)).toBe(100);
+  });
+});
+
+describe('computeSpeedBonusTier', () => {
+  it('returns tier based on remaining fraction', () => {
+    expect(computeSpeedBonusTier(180, 240)).toBe(3);
+    expect(computeSpeedBonusTier(120, 240)).toBe(2);
+    expect(computeSpeedBonusTier(60, 240)).toBe(1);
+    expect(computeSpeedBonusTier(30, 240)).toBe(0);
+  });
+});
+
+describe('applyRoundScores with speed bonus', () => {
+  it('adds speed bonus to In Group winners when enabled', () => {
+    const room = makeRoom(['Dog', 'Dog'], [['Cat']]);
+    room.inGroupSpeedBonus = true;
+    room.inGroupTimerRemainingAtLock = 180;
+    room.roundDurationSecondsAtStart = 240;
+    const { basePoints, speedBonuses } = applyRoundScores(room);
+    expect(basePoints.get('in0')).toBe(2);
+    expect(basePoints.get('in1')).toBe(2);
+    expect(speedBonuses.get('in0')).toBe(3);
+    expect(speedBonuses.get('in1')).toBe(3);
+  });
+
+  it('does not add speed bonus when Out Group wins', () => {
+    const room = makeRoom(['Dog', 'Cat', 'Bird'], [['Dog', 'Dog']]);
+    room.inGroupSpeedBonus = true;
+    room.inGroupTimerRemainingAtLock = 180;
+    room.roundDurationSecondsAtStart = 240;
+    const { basePoints, speedBonuses } = applyRoundScores(room);
+    expect(basePoints.get('out0_0')).toBe(2);
+    expect(basePoints.get('in0')).toBe(0);
+    expect(speedBonuses.get('in0')).toBe(0);
+  });
+});
+
+describe('shouldEndGame', () => {
+  it('returns false when win condition is off', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.winConditionPoints = 0;
+    room.players[0].score = 99;
+    expect(shouldEndGame(room)).toBe(false);
+  });
+
+  it('returns true when a player reaches the win condition', () => {
+    const room = makeRoom(['Dog'], [['Cat']]);
+    room.winConditionPoints = 10;
+    room.players[0].score = 10;
+    expect(shouldEndGame(room)).toBe(true);
+  });
+});
+
+describe('getWinnerIds', () => {
+  it('returns all players tied for the highest score', () => {
+    const room = makeRoom(['Dog'], [['Cat', 'Bird']]);
+    room.players[0].score = 8;
+    room.players[1].score = 12;
+    room.players[2].score = 12;
+    expect(getWinnerIds(room)).toEqual(['out0_0', 'out0_1']);
+  });
+});
+
+describe('allInGroupGuessed and transitionToOutGroupPhase', () => {
+  it('detects when all In Group members have guessed', () => {
+    const room = makeRoom(['Dog', 'Cat'], [['Bird']]);
+    expect(allInGroupGuessed(room)).toBe(true);
+
+    room.players[0].guess = null;
+    expect(allInGroupGuessed(room)).toBe(false);
+  });
+
+  it('clears Out Group guesses when transitioning', () => {
+    const room = makeRoom(['Dog', 'Dog'], [['Cat']]);
+    room.roundDurationMinutes = 5;
+    room.roundStartedAt = Date.now();
+    room.roundDurationSecondsAtStart = 300;
+    transitionToOutGroupPhase(room);
+    expect(room.roundPhase).toBe('outGroup');
+    expect(room.players.find((p) => p.id === 'out0_0')?.guess).toBeNull();
+  });
+});
+
 describe('calculateScores', () => {
   it('Rule 3: all In Group agree → +2 each', () => {
     const room = makeRoom(['Dog', 'Dog', 'Dog'], [['Cat'], ['Bird']]);
@@ -252,12 +356,12 @@ describe('calculateScores', () => {
     expect(scores.get('in2')).toBe(2);
   });
 
-  it('Rule 4: partial In Group agreement → +1 only for those who matched', () => {
+  it('Rule 4: partial In Group agreement → +1 each in In Group', () => {
     const room = makeRoom(['Dog', 'Dog', 'Cat'], [['Bird'], ['Fish']]);
     const scores = calculateScores(room);
     expect(scores.get('in0')).toBe(1);
     expect(scores.get('in1')).toBe(1);
-    expect(scores.get('in2')).toBe(0);
+    expect(scores.get('in2')).toBe(1);
   });
 
   it('Rule 4: no agreement in In Group → no In Group points', () => {
@@ -283,6 +387,23 @@ describe('calculateScores', () => {
     expect(scores.get('out0_0')).toBe(1);
     expect(scores.get('out0_1')).toBe(1);
     expect(scores.get('out0_2')).toBe(1);
+    expect(scores.get('in0')).toBe(0);
+  });
+
+  it('Rule 2: Out Group scores when In Group is split and 2+ Out Group match one word', () => {
+    const room = makeRoom(['Dog', 'Cat', 'Bird'], [['Dog', 'Dog', 'Fish']]);
+    const scores = calculateScores(room);
+    expect(scores.get('out0_0')).toBe(1);
+    expect(scores.get('out0_1')).toBe(1);
+    expect(scores.get('out0_2')).toBe(1);
+    expect(scores.get('in0')).toBe(0);
+  });
+
+  it('Rule 2: needs 2+ Out Group members on the same In Group word for partial scoring', () => {
+    const room = makeRoom(['Dog', 'Cat', 'Bird'], [['Dog', 'Fish']]);
+    const scores = calculateScores(room);
+    expect(scores.get('out0_0')).toBe(0);
+    expect(scores.get('out0_1')).toBe(0);
     expect(scores.get('in0')).toBe(0);
   });
 });

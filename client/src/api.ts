@@ -515,6 +515,8 @@ export function updateSettings(settings: {
   wordSetId?: string;
   wordSetName?: string;
   roundDurationMinutes?: number;
+  winConditionPoints?: number;
+  inGroupSpeedBonus?: boolean;
 }) {
 
   getSocket().emit('updateSettings', settings);

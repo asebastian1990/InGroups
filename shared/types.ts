@@ -5,6 +5,8 @@ export interface Player {
   isHost: boolean;
   guess: string | null;
   roundPoints: number;
+  /** Speed bonus points earned this round (display only; included in score). */
+  roundSpeedBonus: number;
 }
 
 export interface Group {
@@ -47,6 +49,17 @@ export interface RoomState {
   chatMessages: ChatMessage[];
   needsReshuffle: boolean;
   roundNotice: string | null;
+  /** 0 = off; 1–100 = points to win. Set in lobby before game starts. */
+  winConditionPoints: number;
+  /** Bonus points when In Group wins quickly (requires round timer). */
+  inGroupSpeedBonus: boolean;
+  /** Split timer phases when round timer is active. */
+  roundPhase: RoundPhase;
+  outGroupTimer: number | null;
+  outGroupStartedAt: number | null;
+  roundDurationSecondsAtStart: number | null;
+  /** In Group timer remaining when all In Group members locked in. */
+  inGroupTimerRemainingAtLock: number | null;
 }
 
 export interface WordSet {
@@ -66,6 +79,16 @@ export interface LicenseInfo {
 export const MIN_ROUND_DURATION_MINUTES = 0;
 export const MAX_ROUND_DURATION_MINUTES = 15;
 export const DEFAULT_ROUND_DURATION_MINUTES = 0;
+
+/** Win condition: 0 = off; 1–100 = points to win. */
+export const MIN_WIN_CONDITION_POINTS = 0;
+export const MAX_WIN_CONDITION_POINTS = 100;
+export const DEFAULT_WIN_CONDITION_POINTS = 10;
+
+/** Out Group phase duration when round timer is active (seconds). */
+export const OUT_GROUP_PHASE_SECONDS = 60;
+
+export type RoundPhase = 'inGroup' | 'outGroup';
 
 /** One-time license purchase — unlocks premium word sets for one account. */
 export const LICENSE_UNIT_PRICE_CENTS = 4900;
@@ -110,6 +133,14 @@ export interface ClientRoomState {
   chatMessages: ChatMessage[];
   needsReshuffle: boolean;
   roundNotice: string | null;
+  winConditionPoints: number;
+  inGroupSpeedBonus: boolean;
+  roundPhase: RoundPhase;
+  outGroupTimer: number | null;
+  /** Current speed bonus tier (0–3) during In Group phase; null when inactive. */
+  activeSpeedBonus: number | null;
+  /** Player ids tied for highest score when phase is finished. */
+  winnerIds: string[];
 }
 
 export const FREE_WORD_SETS: WordSet[] = [

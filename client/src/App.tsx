@@ -14,7 +14,7 @@ import {
 } from './api';
 import { LogoMark } from './components/Logo';
 import { HeaderAuth } from './components/HeaderAuth';
-import { ConfirmModal } from './components/UI';
+import { ConfirmModal, HowToPlayModal } from './components/UI';
 import { LandingScreen } from './screens/LandingScreen';
 import { StartScreen } from './screens/StartScreen';
 import { GameScreen } from './screens/GameScreen';
@@ -40,7 +40,12 @@ function readLicenseReturnParams() {
 }
 
 function screenForRoom(room: ClientRoomState): Screen {
-  if (room.groups.length > 0 || room.phase === 'playing' || room.phase === 'roundEnd') {
+  if (
+    room.groups.length > 0 ||
+    room.phase === 'playing' ||
+    room.phase === 'roundEnd' ||
+    room.phase === 'finished'
+  ) {
     return 'game';
   }
   return 'start';
@@ -59,6 +64,7 @@ export default function App() {
   );
   const [licenseReturn, setLicenseReturn] = useState(initialLicenseReturn);
   const [lobbyNameNotice, setLobbyNameNotice] = useState<string | null>(null);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
 
@@ -248,6 +254,14 @@ export default function App() {
           <span className="app-title">InGroups</span>
         </div>
         <div className="app-header-right">
+          <button
+            type="button"
+            className="header-help-btn"
+            aria-label="How to Play"
+            onClick={() => setShowHowToPlay(true)}
+          >
+            ?
+          </button>
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
             {guest ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
           </button>
@@ -276,6 +290,10 @@ export default function App() {
           onConfirm={handleExit}
           onCancel={() => setShowExitConfirm(false)}
         />
+      )}
+
+      {showHowToPlay && (
+        <HowToPlayModal onClose={() => setShowHowToPlay(false)} />
       )}
 
       {screen === 'game' && room.phase === 'playing' && (

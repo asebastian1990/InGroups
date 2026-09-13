@@ -1,6 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Group, Player, RoomState } from '../../shared/types.js';
-import { FREE_WORD_SETS, MIN_IN_GROUP_SIZE, MIN_PLAYERS, MAX_ROUND_DURATION_MINUTES, MIN_ROUND_DURATION_MINUTES } from '../../shared/types.js';
+import {
+  FREE_WORD_SETS,
+  MIN_IN_GROUP_SIZE,
+  MIN_PLAYERS,
+  MAX_ROUND_DURATION_MINUTES,
+  MIN_ROUND_DURATION_MINUTES,
+  MIN_WIN_CONDITION_POINTS,
+  MAX_WIN_CONDITION_POINTS,
+  DEFAULT_WIN_CONDITION_POINTS,
+  OUT_GROUP_PHASE_SECONDS,
+} from '../../shared/types.js';
 
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -20,6 +30,7 @@ export function createRoom(hostName: string, hostId: string): RoomState {
     isHost: true,
     guess: null,
     roundPoints: 0,
+    roundSpeedBonus: 0,
   };
 
   return {
@@ -39,6 +50,13 @@ export function createRoom(hostName: string, hostId: string): RoomState {
     chatMessages: [],
     needsReshuffle: false,
     roundNotice: null,
+    winConditionPoints: DEFAULT_WIN_CONDITION_POINTS,
+    inGroupSpeedBonus: false,
+    roundPhase: 'inGroup',
+    outGroupTimer: null,
+    outGroupStartedAt: null,
+    roundDurationSecondsAtStart: null,
+    inGroupTimerRemainingAtLock: null,
   };
 }
 
@@ -112,6 +130,145 @@ export function getRemainingTime(room: RoomState): number | null {
 export function isRoundExpired(room: RoomState): boolean {
   const remaining = getRemainingTime(room);
   return remaining !== null && remaining <= 0;
+}
+
+export function clampWinConditionPoints(points: number): number {
+  const rounded = Math.round(points);
+  if (rounded <= MIN_WIN_CONDITION_POINTS) return MIN_WIN_CONDITION_POINTS;
+  return Math.min(MAX_WIN_CONDITION_POINTS, Math.max(1, rounded));
+}
+
+export function allInGroupGuessed(room: RoomState): boolean {
+  const inGroup = room.groups.find((g) => g.isInGroup);
+  if (!inGroup) return false;
+  return inGroup.playerIds.every((id) => {
+    const player = room.players.find((p) => p.id === id);
+    return player?.guess !== null && player?.guess !== undefined;
+  });
+}
+
+export function allOutGroupGuessed(room: RoomState): boolean {
+  const outGroups = room.groups.filter((g) => !g.isInGroup);
+  for (const group of outGroups) {
+    for (const id of group.playerIds) {
+      const player = room.players.find((p) => p.id === id);
+      if (!player || player.guess === null) return false;
+    }
+  }
+  return outGroups.length > 0;
+}
+
+export function getOutGroupRemainingTime(room: RoomState): number | null {
+  if (!room.outGroupStartedAt) return OUT_GROUP_PHASE_SECONDS;
+  const elapsed = Math.floor((Date.now() - room.outGroupStartedAt) / 1000);
+  return Math.max(0, OUT_GROUP_PHASE_SECONDS - elapsed);
+}
+
+export function isOutGroupPhaseExpired(room: RoomState): boolean {
+  const remaining = getOutGroupRemainingTime(room);
+  return remaining !== null && remaining <= 0;
+}
+
+export function usesSplitTimer(room: RoomState): boolean {
+  return room.roundDurationMinutes > 0;
+}
+
+export function canPlayerSubmitGuess(room: RoomState, playerId: string): boolean {
+  if (!usesSplitTimer(room)) return true;
+  const group = room.groups.find((g) => g.playerIds.includes(playerId));
+  if (!group) return false;
+  if (room.roundPhase === 'inGroup') return group.isInGroup;
+  if (room.roundPhase === 'outGroup') return !group.isInGroup;
+  return true;
+}
+
+export function computeSpeedBonusTier(remainingSeconds: number, totalSeconds: number): number {
+  if (totalSeconds <= 0) return 0;
+  const fraction = remainingSeconds / totalSeconds;
+  if (fraction >= 0.75) return 3;
+  if (fraction >= 0.5) return 2;
+  if (fraction >= 0.25) return 1;
+  return 0;
+}
+
+export function computeActiveSpeedBonus(room: RoomState): number | null {
+  if (!room.inGroupSpeedBonus || !usesSplitTimer(room)) return null;
+  if (room.phase !== 'playing' || room.roundPhase !== 'inGroup') return null;
+  const total = room.roundDurationSecondsAtStart ?? getRoundDurationSeconds(room);
+  if (total <= 0) return null;
+  const remaining = getRemainingTime(room) ?? 0;
+  return computeSpeedBonusTier(remaining, total);
+}
+
+export function didInGroupWinRound(points: Map<string, number>, room: RoomState): boolean {
+  const inGroup = room.groups.find((g) => g.isInGroup);
+  if (!inGroup) return false;
+  return inGroup.playerIds.some((id) => (points.get(id) ?? 0) > 0);
+}
+
+export interface RoundScoreBreakdown {
+  basePoints: Map<string, number>;
+  speedBonuses: Map<string, number>;
+}
+
+export function applyRoundScores(room: RoomState): RoundScoreBreakdown {
+  const basePoints = calculateScores(room);
+  const speedBonuses = new Map<string, number>();
+  room.players.forEach((p) => speedBonuses.set(p.id, 0));
+
+  if (
+    room.inGroupSpeedBonus &&
+    room.inGroupTimerRemainingAtLock !== null &&
+    room.roundDurationSecondsAtStart &&
+    room.roundDurationSecondsAtStart > 0 &&
+    didInGroupWinRound(basePoints, room)
+  ) {
+    const bonus = computeSpeedBonusTier(
+      room.inGroupTimerRemainingAtLock,
+      room.roundDurationSecondsAtStart
+    );
+    if (bonus > 0) {
+      const inGroup = room.groups.find((g) => g.isInGroup);
+      if (inGroup) {
+        inGroup.playerIds.forEach((id) => {
+          if ((basePoints.get(id) ?? 0) > 0) {
+            speedBonuses.set(id, bonus);
+          }
+        });
+      }
+    }
+  }
+
+  return { basePoints, speedBonuses };
+}
+
+export function shouldEndGame(room: RoomState): boolean {
+  if (room.winConditionPoints <= 0) return false;
+  return room.players.some((p) => p.score >= room.winConditionPoints);
+}
+
+export function getWinnerIds(room: RoomState): string[] {
+  if (room.players.length === 0) return [];
+  const maxScore = Math.max(...room.players.map((p) => p.score));
+  return room.players.filter((p) => p.score === maxScore).map((p) => p.id);
+}
+
+export function clearOutGroupGuesses(room: RoomState): void {
+  const outGroups = room.groups.filter((g) => !g.isInGroup);
+  for (const group of outGroups) {
+    for (const id of group.playerIds) {
+      const player = room.players.find((p) => p.id === id);
+      if (player) player.guess = null;
+    }
+  }
+}
+
+export function transitionToOutGroupPhase(room: RoomState): void {
+  room.inGroupTimerRemainingAtLock = getRemainingTime(room) ?? 0;
+  room.roundPhase = 'outGroup';
+  room.outGroupStartedAt = Date.now();
+  room.outGroupTimer = OUT_GROUP_PHASE_SECONDS;
+  clearOutGroupGuesses(room);
 }
 
 export function hasGroupBelowMinSize(groups: Group[]): boolean {
@@ -300,7 +457,7 @@ export function calculateScores(room: RoomState): Map<string, number> {
 
   const outGroups = room.groups.filter((g) => !g.isInGroup);
 
-  // Rule 1: All non-In Group members choose the most popular In Group word → +2 each
+  // Rule 1: All Out Group members choose the same word tied for most popular in In Group → +2 each
   for (const group of outGroups) {
     const groupPlayers = group.playerIds
       .map((id) => room.players.find((p) => p.id === id))
@@ -308,28 +465,38 @@ export function calculateScores(room: RoomState): Map<string, number> {
 
     if (groupPlayers.length === 0) continue;
 
-    const allMatchPopular =
-      mostPopularWord &&
-      groupPlayers.every((p) => p.guess === mostPopularWord);
+    const sharedGuess = groupPlayers[0]?.guess;
+    if (!sharedGuess) continue;
 
-    if (allMatchPopular) {
+    const allSameGuess = groupPlayers.every((p) => p.guess === sharedGuess);
+    if (!allSameGuess) continue;
+
+    const inCount = guessCounts.get(sharedGuess) ?? 0;
+    if (inCount >= mostPopularCount && inCount > 0) {
       groupPlayers.forEach((p) => points.set(p.id, 2));
       return points;
     }
   }
 
-  // Rule 2: 2+ In Group agree on a word AND another group matches/exceeds → +1 each in that group
-  if (mostPopularCount >= 2) {
-    for (const group of outGroups) {
-      const groupPlayers = group.playerIds
-        .map((id) => room.players.find((p) => p.id === id))
-        .filter(Boolean) as Player[];
+  // Rule 2: Partial Out Group match on an In Group word → +1 each in that Out Group
+  for (const group of outGroups) {
+    const groupPlayers = group.playerIds
+      .map((id) => room.players.find((p) => p.id === id))
+      .filter(Boolean) as Player[];
 
-      const matchingGuesses = groupPlayers.filter((p) => p.guess === mostPopularWord).length;
-      if (matchingGuesses >= mostPopularCount) {
-        groupPlayers.forEach((p) => points.set(p.id, 1));
-        return points;
-      }
+    if (groupPlayers.length === 0) continue;
+
+    for (const [word, inCount] of guessCounts) {
+      const outMatching = groupPlayers.filter((p) => p.guess === word).length;
+      if (outMatching < 2 || outMatching < inCount) continue;
+
+      const allSameWord =
+        outMatching === groupPlayers.length &&
+        groupPlayers.every((p) => p.guess === word);
+      if (allSameWord && inCount >= mostPopularCount) continue;
+
+      groupPlayers.forEach((p) => points.set(p.id, 1));
+      return points;
     }
   }
 
@@ -339,13 +506,9 @@ export function calculateScores(room: RoomState): Map<string, number> {
     return points;
   }
 
-  // Rule 4: Some (but not all) In Group members agree → +1 each who matched
+  // Rule 4: 2+ In Group agree on a word, but not all → +1 each in In Group
   if (mostPopularCount >= 2 && !allInGroupAgree) {
-    inGroupPlayers.forEach((p) => {
-      if (p.guess === mostPopularWord) {
-        points.set(p.id, 1);
-      }
-    });
+    inGroupPlayers.forEach((p) => points.set(p.id, 1));
   }
 
   return points;
