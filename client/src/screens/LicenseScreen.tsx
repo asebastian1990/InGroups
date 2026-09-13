@@ -47,7 +47,7 @@ export function LicenseScreen({
     confirmLicensePurchase(purchaseSessionId)
       .then((data) => {
         setSummary(data);
-        setSuccess('Purchase complete! Your license key(s) are below.');
+        setSuccess('Purchase complete!');
         onPurchaseHandled?.();
       })
       .catch((err) => {
@@ -120,7 +120,7 @@ export function LicenseScreen({
 
       {activeLicense ? (
         <div style={{ marginBottom: 20 }}>
-          <p className="section-label">Active License (this account)</p>
+          <p className="section-label">Active License</p>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>{activeLicense.key}</p>
           <p className="info-msg" style={{ fontSize: '0.8rem', marginTop: 8 }}>
             Only the host needs a license to use expanded word sets in a game.
@@ -170,7 +170,7 @@ export function LicenseScreen({
             ))}
           </ul>
           <p className="info-msg" style={{ fontSize: '0.8rem', marginTop: 8 }}>
-            Share these with friends or activate one on another account. Each key works for one account.
+            Share these with others or activate one on another account.
           </p>
         </div>
       )}
