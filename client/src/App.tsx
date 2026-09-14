@@ -195,9 +195,28 @@ export default function App() {
   if (!initialized) {
     return (
       <div className="app">
+        <header className="app-header">
+          <div className="app-header-left">
+            <LogoMark size={28} />
+            <span className="app-title">InGroups</span>
+          </div>
+          <div className="app-header-right">
+            <button
+              type="button"
+              className="header-help-btn"
+              aria-label="How to Play"
+              onClick={() => setShowHowToPlay(true)}
+            >
+              ?
+            </button>
+          </div>
+        </header>
         <main className="app-content auth-screen">
           <p className="muted">Loading…</p>
         </main>
+        {showHowToPlay && (
+          <HowToPlayModal onClose={() => setShowHowToPlay(false)} />
+        )}
       </div>
     );
   }
@@ -214,6 +233,14 @@ export default function App() {
             <span className="app-title">InGroups</span>
           </div>
           <div className="app-header-right">
+            <button
+              type="button"
+              className="header-help-btn"
+              aria-label="How to Play"
+              onClick={() => setShowHowToPlay(true)}
+            >
+              ?
+            </button>
             <HeaderAuth />
           </div>
         </header>
@@ -239,6 +266,10 @@ export default function App() {
             />
           )}
         </main>
+
+        {showHowToPlay && (
+          <HowToPlayModal onClose={() => setShowHowToPlay(false)} />
+        )}
       </div>
     );
   }

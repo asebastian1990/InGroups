@@ -78,7 +78,7 @@ export interface LicenseInfo {
 /** Round timer: 0 = off; 1–15 = minutes per round. */
 export const MIN_ROUND_DURATION_MINUTES = 0;
 export const MAX_ROUND_DURATION_MINUTES = 15;
-export const DEFAULT_ROUND_DURATION_MINUTES = 0;
+export const DEFAULT_ROUND_DURATION_MINUTES = 5;
 
 /** Win condition: 0 = off; 1–100 = points to win. */
 export const MIN_WIN_CONDITION_POINTS = 0;

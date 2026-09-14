@@ -197,9 +197,9 @@ export function GameScreen({ room, onNavigate }: Props) {
     if (next > MAX_ROUND_DURATION_MINUTES) next = MIN_ROUND_DURATION_MINUTES;
     setHostError('');
     const settings: Parameters<typeof updateSettings>[0] = { roundDurationMinutes: next };
-    if (next === 0 && room.inGroupSpeedBonus) {
+    if (next === 0) {
       settings.inGroupSpeedBonus = false;
-    } else if (next > 0 && current === 0) {
+    } else if (current === 0) {
       settings.inGroupSpeedBonus = true;
     }
     updateSettings(settings);
@@ -476,7 +476,7 @@ export function GameScreen({ room, onNavigate }: Props) {
                             <button type="button" onClick={() => adjustRoundDuration(1)}>
                               +
                             </button>
-                            <span className="number-input-label">Timer (Minutes)</span>
+                            <span className="number-input-label">Round Timer (Minutes)</span>
                           </div>
                         </div>
                         <div className={`speed-bonus-toggle${!timerActive ? ' speed-bonus-toggle-disabled' : ''}`}>
@@ -513,7 +513,7 @@ export function GameScreen({ room, onNavigate }: Props) {
                     )}
                     {!isFinished && (
                       <button type="button" className="btn btn-full" onClick={handleShiftGroups}>
-                        Change In Group
+                        Switch In Group
                       </button>
                     )}
                     {!isFinished && (

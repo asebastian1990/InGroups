@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { ClientRoomState } from '@shared/types';
 import {
   MIN_PLAYERS,
@@ -6,7 +5,6 @@ import {
   MAX_WIN_CONDITION_POINTS,
 } from '@shared/types';
 import { startGame, updateSettings } from '../api';
-import { HowToPlayModal } from '../components/UI';
 import { PlayerList } from '../components/PlayerList';
 
 interface Props {
@@ -15,7 +13,6 @@ interface Props {
 }
 
 export function StartScreen({ room, nameNotice }: Props) {
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const isHost = room.myPlayerId === room.hostId;
 
   const adjustWinCondition = (delta: number) => {
@@ -36,11 +33,6 @@ export function StartScreen({ room, nameNotice }: Props) {
         <span className="room-code-value">{room.code}</span>
       </div>
 
-      <div className="menu-item" onClick={() => setShowHowToPlay(true)}>
-        <span>How to Play</span>
-        <span className="menu-item-arrow">›</span>
-      </div>
-
       {isHost ? (
         <div className="host-controls-row host-controls-row-timer win-condition-row">
           <div className="number-input number-input-compact">
@@ -51,12 +43,12 @@ export function StartScreen({ room, nameNotice }: Props) {
             <button type="button" onClick={() => adjustWinCondition(1)}>
               +
             </button>
-            <span className="number-input-label">Win Condition (points)</span>
+            <span className="number-input-label">Points to Win</span>
           </div>
         </div>
       ) : (
         <p className="section-label win-condition-readonly">
-          Win Condition: {(room.winConditionPoints ?? 0) === 0 ? 'Off' : `${room.winConditionPoints} points`}
+          Points to Win: {(room.winConditionPoints ?? 0) === 0 ? 'Off' : `${room.winConditionPoints} points`}
         </p>
       )}
 
@@ -87,7 +79,6 @@ export function StartScreen({ room, nameNotice }: Props) {
         <p className="waiting-msg">Waiting for host to start the game…</p>
       )}
 
-      {showHowToPlay && <HowToPlayModal onClose={() => setShowHowToPlay(false)} />}
     </div>
   );
 }
