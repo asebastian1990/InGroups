@@ -100,18 +100,16 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
         {error && <p className="error-msg">{error}</p>}
       </div>
 
-      {!guest && (
-        <div className="landing-menu">
-          <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
-            <span>Create Word Set</span>
-            <span className="menu-item-arrow">›</span>
-          </div>
-          <div className="menu-item" onClick={() => onNavigate('license')}>
-            <span>License</span>
-            <span className="menu-item-arrow">Get or activate ›</span>
-          </div>
+      <div className="landing-menu">
+        <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
+          <span>Create Word Set</span>
+          <span className="menu-item-arrow">›</span>
         </div>
-      )}
+        <div className="menu-item" onClick={() => onNavigate('license')}>
+          <span>License</span>
+          <span className="menu-item-arrow">{guest ? '›' : 'Get or activate ›'}</span>
+        </div>
+      </div>
     </div>
   );
 }

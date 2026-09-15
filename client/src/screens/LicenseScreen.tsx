@@ -3,6 +3,7 @@ import {
   activateLicense,
   confirmLicensePurchase,
   getLicensePurchaseSummary,
+  isGuestMode,
 } from '../api';
 import type { LicensePurchaseSummary } from '@shared/types';
 import { LicenseShopModal } from '../components/LicenseShopModal';
@@ -20,6 +21,7 @@ export function LicenseScreen({
   purchaseSessionId,
   onPurchaseHandled,
 }: Props) {
+  const guest = isGuestMode();
   const [key, setKey] = useState('');
   const [summary, setSummary] = useState<LicensePurchaseSummary | null>(null);
   const [error, setError] = useState('');
@@ -35,10 +37,11 @@ export function LicenseScreen({
   }, []);
 
   useEffect(() => {
+    if (guest) return;
     loadSummary().catch((err) => {
       setError(err instanceof Error ? err.message : 'Failed to load license');
     });
-  }, [loadSummary]);
+  }, [guest, loadSummary]);
 
   useEffect(() => {
     if (purchaseStatus !== 'success' || !purchaseSessionId) return;
@@ -112,6 +115,18 @@ export function LicenseScreen({
       setLoading(false);
     }
   };
+
+  if (guest) {
+    return (
+      <div>
+        <button className="back-link" onClick={onBack}>← Back</button>
+        <h2 style={{ fontSize: '1.2rem', marginBottom: 16 }}>License</h2>
+        <p className="info-msg">
+          Create / sign into an account in order to access licenses.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

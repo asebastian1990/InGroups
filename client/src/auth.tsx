@@ -54,12 +54,9 @@ function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) 
           />
         </div>
         <div className="guest-auth">
-          <button type="button" className="guest-link" onClick={onContinueAsGuest}>
+          <button type="button" className="btn" onClick={onContinueAsGuest}>
             Continue as Guest
           </button>
-          <p className="guest-note">
-            Play free word sets only. Sign in for licenses and custom word sets.
-          </p>
         </div>
       </main>
     </div>

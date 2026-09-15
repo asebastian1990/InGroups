@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { WordSet } from '@shared/types';
-import { getWordSets, saveWordSet, deleteWordSet, getLicense } from '../api';
+import { getWordSets, saveWordSet, deleteWordSet, getLicense, isGuestMode } from '../api';
 
 interface Props {
   onBack: () => void;
@@ -9,6 +9,7 @@ interface Props {
 }
 
 export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
+  const guest = isGuestMode();
   const [hasLicense, setHasLicense] = useState(false);
   const [name, setName] = useState(editSet?.name ?? '');
   const [wordsText, setWordsText] = useState(editSet?.words.join('\n') ?? '');
@@ -18,13 +19,14 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
   const [editing, setEditing] = useState<WordSet | null>(editSet ?? null);
 
   useEffect(() => {
+    if (guest) return;
     Promise.all([getLicense(), getWordSets()])
       .then(([license, sets]) => {
         setHasLicense(!!license);
         setCustomSets(sets.filter((s) => s.isCustom));
       })
       .catch(() => {});
-  }, []);
+  }, [guest]);
 
   const parseWords = (text: string): string[] => {
     return text
@@ -71,6 +73,18 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
     setName('');
     setWordsText('');
   };
+
+  if (guest) {
+    return (
+      <div>
+        <button className="back-link" onClick={onBack}>← Back</button>
+        <h2 style={{ fontSize: '1.2rem', marginBottom: 16 }}>Create Word Set</h2>
+        <p className="info-msg">
+          Create / sign into an account in order to create custom word sets.
+        </p>
+      </div>
+    );
+  }
 
   if (!hasLicense) {
     return (
