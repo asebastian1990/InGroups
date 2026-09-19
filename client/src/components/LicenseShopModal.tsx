@@ -130,8 +130,8 @@ export function LicenseShopModal({ onClose }: Props) {
 
       {checkoutOpenedExternally && (
         <p className="info-msg">
-          Checkout opened in your browser. Complete payment there, then return to this Teams tab and
-          refresh the License page to see your keys.
+          Checkout opened in your browser. After paying, click <strong>Open Microsoft Teams</strong>{' '}
+          on the confirmation page to come back here.
         </p>
       )}
 

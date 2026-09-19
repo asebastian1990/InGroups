@@ -116,6 +116,13 @@ export default function App() {
   }, [teamsGuestOnly, landingView]);
 
   useEffect(() => {
+    if (!teamsEmbed || teamsProfile.inTeams) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('purchase')) return;
+    window.location.replace(`/purchase/complete?${params.toString()}`);
+  }, [teamsEmbed, teamsProfile.inTeams]);
+
+  useEffect(() => {
     localStorage.removeItem('ingroups_player');
     restoreSession()
       .then((session) => {

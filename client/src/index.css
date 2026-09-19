@@ -50,6 +50,32 @@ body {
   max-width: 100%;
 }
 
+.purchase-complete {
+  padding: 32px 20px 40px;
+  text-align: center;
+}
+
+.purchase-complete h1 {
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+}
+
+.purchase-complete-lead {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.purchase-complete-note {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-top: 20px;
+  line-height: 1.4;
+}
+
 .teams-context-banner {
   margin: 0;
   padding: 8px 20px;

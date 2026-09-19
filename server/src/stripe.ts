@@ -62,8 +62,14 @@ export async function createLicenseCheckoutSession(
       buyerClerkId,
       quantity: String(qty),
     },
-    success_url: `${appBaseUrl()}${returnTo === 'teams' ? '/teams' : ''}?view=license&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appBaseUrl()}${returnTo === 'teams' ? '/teams' : ''}?view=license&purchase=cancelled`,
+    success_url:
+      returnTo === 'teams'
+        ? `${appBaseUrl()}/purchase/complete?purchase=success&session_id={CHECKOUT_SESSION_ID}`
+        : `${appBaseUrl()}/?view=license&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url:
+      returnTo === 'teams'
+        ? `${appBaseUrl()}/purchase/complete?purchase=cancelled`
+        : `${appBaseUrl()}/?view=license&purchase=cancelled`,
   });
 
   if (!session.url) {
