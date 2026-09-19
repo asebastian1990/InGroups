@@ -110,10 +110,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (teamsEmbed && landingView !== 'home' && landingView !== 'viewWordSets') {
+    if (teamsGuestOnly && landingView !== 'home' && landingView !== 'viewWordSets') {
       setLandingView('home');
     }
-  }, [teamsEmbed, landingView]);
+  }, [teamsGuestOnly, landingView]);
 
   useEffect(() => {
     localStorage.removeItem('ingroups_player');
