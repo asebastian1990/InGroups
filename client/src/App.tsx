@@ -21,10 +21,12 @@ import { GameScreen } from './screens/GameScreen';
 import { WordSetScreen } from './screens/WordSetScreen';
 import { LicenseScreen } from './screens/LicenseScreen';
 import { CreateWordSetScreen } from './screens/CreateWordSetScreen';
+import { ViewWordSetsScreen } from './screens/ViewWordSetsScreen';
 import { ChatPanel } from './components/ChatPanel';
+import { useTeamsEmbed, useTeamsProfile } from './teams/TeamsEmbedContext';
 
-type Screen = 'start' | 'game' | 'wordSet';
-type LandingView = 'home' | 'license' | 'createWordSet';
+type Screen = 'start' | 'game' | 'wordSet' | 'viewWordSets';
+type LandingView = 'home' | 'license' | 'createWordSet' | 'viewWordSets';
 
 function readLicenseReturnParams() {
   const params = new URLSearchParams(window.location.search);
@@ -52,6 +54,9 @@ function screenForRoom(room: ClientRoomState): Screen {
 }
 
 export default function App() {
+  const teamsEmbed = useTeamsEmbed();
+  const teamsProfile = useTeamsProfile();
+  const teamsGuestOnly = teamsEmbed && !teamsProfile.signedInWithTeams;
   const initialLicenseReturn = readLicenseReturnParams();
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [room, setRoom] = useState<ClientRoomState | null>(null);
@@ -103,6 +108,12 @@ export default function App() {
     if (!sessionActiveRef.current) return;
     setRoom((prev) => (prev ? { ...prev, chatMessages: messages } : prev));
   }, []);
+
+  useEffect(() => {
+    if (teamsEmbed && landingView !== 'home' && landingView !== 'viewWordSets') {
+      setLandingView('home');
+    }
+  }, [teamsEmbed, landingView]);
 
   useEffect(() => {
     localStorage.removeItem('ingroups_player');
@@ -194,7 +205,7 @@ export default function App() {
 
   if (!initialized) {
     return (
-      <div className="app">
+      <div className={`app${teamsEmbed ? ' app--teams' : ''}`}>
         <header className="app-header">
           <div className="app-header-left">
             <LogoMark size={28} />
@@ -223,7 +234,7 @@ export default function App() {
 
   if (!playerId || !room) {
     return (
-      <div className="app">
+      <div className={`app${teamsEmbed ? ' app--teams' : ''}`}>
         {closedMessage && (
           <div className="closed-banner">{closedMessage}</div>
         )}
@@ -241,11 +252,20 @@ export default function App() {
             >
               ?
             </button>
-            <HeaderAuth />
+            {!teamsGuestOnly && <HeaderAuth />}
           </div>
         </header>
+        {teamsEmbed && (
+          <p className="teams-context-banner">
+            {teamsProfile.signedInWithTeams
+              ? `Signed in with Microsoft Teams${teamsProfile.signedInEmail ? ` (${teamsProfile.signedInEmail})` : ''}`
+              : teamsProfile.inTeams
+                ? `Microsoft Teams${teamsProfile.meetingId ? ' · In meeting' : ''}${teamsProfile.displayName ? ` · ${teamsProfile.displayName}` : ''}`
+                : 'Microsoft Teams preview'}
+          </p>
+        )}
         <main className="app-content">
-          {landingView === 'license' && (
+          {landingView === 'license' && !teamsGuestOnly && (
             <LicenseScreen
               onBack={() => setLandingView('home')}
               purchaseStatus={licenseReturn.purchaseStatus}
@@ -253,14 +273,18 @@ export default function App() {
               onPurchaseHandled={clearLicenseReturnParams}
             />
           )}
-          {landingView === 'createWordSet' && (
+          {landingView === 'createWordSet' && !teamsGuestOnly && (
             <CreateWordSetScreen
               onBack={() => setLandingView('home')}
               onGetLicense={() => setLandingView('license')}
             />
           )}
+          {landingView === 'viewWordSets' && (
+            <ViewWordSetsScreen onBack={() => setLandingView('home')} />
+          )}
           {landingView === 'home' && (
             <LandingScreen
+              teamsEmbed={teamsEmbed}
               onEnter={handleEnter}
               onNavigate={(s) => setLandingView(s as LandingView)}
             />
@@ -278,7 +302,7 @@ export default function App() {
   const guest = isGuestMode();
 
   return (
-    <div className="app">
+    <div className={`app${teamsEmbed ? ' app--teams' : ''}`}>
       <header className="app-header">
         <div className="app-header-left">
           <LogoMark size={28} />
@@ -294,15 +318,22 @@ export default function App() {
             ?
           </button>
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
-            {guest ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
+            {guest || teamsEmbed ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
           </button>
-          {!guest && <HeaderAuth />}
+          {!guest && !teamsGuestOnly && <HeaderAuth />}
         </div>
       </header>
 
       <main className="app-content">
         {screen === 'start' && (
-          <StartScreen room={room} nameNotice={lobbyNameNotice} />
+          <StartScreen
+            room={room}
+            nameNotice={lobbyNameNotice}
+            onNavigate={(s) => setScreen(s as Screen)}
+          />
+        )}
+        {screen === 'viewWordSets' && (
+          <ViewWordSetsScreen onBack={() => setScreen('start')} />
         )}
         {screen === 'game' && (
           <GameScreen room={room} onNavigate={(s) => setScreen(s as Screen)} />

@@ -30,6 +30,7 @@ import {
 } from './game.js';
 import {
   getWordSets,
+  getWordSetsForView,
   getWordSetWords,
   saveCustomWordSet,
   deleteCustomWordSet,
@@ -685,9 +686,19 @@ export function setupSocketHandlers(io: Server) {
       }
     });
 
-    socket.on('getWordSets', async (_data, cb) => {
+    socket.on('getWordSets', async (data, cb) => {
       const ack = typeof cb === 'function' ? cb : () => {};
+      const forView = !!data && typeof data === 'object' && data.forView === true;
       try {
+        if (forView) {
+          if (isGuestSocket(socket)) {
+            ack(await getWordSetsForView());
+            return;
+          }
+          const license = await getPlayerLicense(playerAuthId);
+          ack(await getWordSetsForView(license ? playerAuthId : undefined));
+          return;
+        }
         if (isGuestSocket(socket)) {
           ack(await getWordSets(false));
           return;

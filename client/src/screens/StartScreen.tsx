@@ -10,9 +10,10 @@ import { PlayerList } from '../components/PlayerList';
 interface Props {
   room: ClientRoomState;
   nameNotice?: string | null;
+  onNavigate: (screen: string) => void;
 }
 
-export function StartScreen({ room, nameNotice }: Props) {
+export function StartScreen({ room, nameNotice, onNavigate }: Props) {
   const isHost = room.myPlayerId === room.hostId;
 
   const adjustWinCondition = (delta: number) => {
@@ -51,6 +52,11 @@ export function StartScreen({ room, nameNotice }: Props) {
           Points to Win: {(room.winConditionPoints ?? 0) === 0 ? 'Off' : `${room.winConditionPoints} points`}
         </p>
       )}
+
+      <div className="menu-item lobby-view-word-sets" onClick={() => onNavigate('viewWordSets')}>
+        <span>View Word Sets</span>
+        <span className="menu-item-arrow">›</span>
+      </div>
 
       <PlayerList players={room.players} />
 

@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Logo } from '../components/Logo';
 import { createRoom, joinRoom, isGuestMode } from '../api';
+import { useTeamsProfile } from '../teams/TeamsEmbedContext';
 import type { ClientRoomState } from '@shared/types';
 
 interface Props {
+  teamsEmbed?: boolean;
   onEnter: (playerId: string, roomCode: string, room?: ClientRoomState, requestedName?: string) => void;
   onNavigate: (screen: string) => void;
 }
@@ -21,10 +23,12 @@ function defaultNameFromClerkUser(user: NonNullable<ReturnType<typeof useUser>['
   return '';
 }
 
-export function LandingScreen({ onEnter, onNavigate }: Props) {
+export function LandingScreen({ teamsEmbed = false, onEnter, onNavigate }: Props) {
   const { user, isLoaded: userLoaded } = useUser();
-  const guest = isGuestMode();
-  const [name, setName] = useState(() => (guest ? 'Guest' : ''));
+  const teamsProfile = useTeamsProfile();
+  const guest = (teamsEmbed && !teamsProfile.signedInWithTeams) || isGuestMode();
+  const defaultGuestName = teamsProfile.displayName?.trim() || 'Guest';
+  const [name, setName] = useState(() => (guest ? defaultGuestName : ''));
 
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +39,11 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
     if (guest || !userLoaded || !user) return;
     setName((current) => current || defaultNameFromClerkUser(user));
   }, [guest, userLoaded, user]);
+
+  useEffect(() => {
+    if (!guest || !teamsProfile.displayName) return;
+    setName((current) => (current === 'Guest' || !current.trim() ? teamsProfile.displayName! : current));
+  }, [guest, teamsProfile.displayName]);
 
   const handleCreate = async () => {
     if (!name.trim() || creating || joining) return;
@@ -101,14 +110,22 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
       </div>
 
       <div className="landing-menu">
-        <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
-          <span>Create Word Set</span>
+        <div className="menu-item" onClick={() => onNavigate('viewWordSets')}>
+          <span>View Word Sets</span>
           <span className="menu-item-arrow">›</span>
         </div>
-        <div className="menu-item" onClick={() => onNavigate('license')}>
-          <span>License</span>
-          <span className="menu-item-arrow">{guest ? '›' : 'Get or activate ›'}</span>
-        </div>
+        {!(teamsEmbed && !teamsProfile.signedInWithTeams) && (
+          <>
+            <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
+              <span>Create Word Set</span>
+              <span className="menu-item-arrow">›</span>
+            </div>
+            <div className="menu-item" onClick={() => onNavigate('license')}>
+              <span>License</span>
+              <span className="menu-item-arrow">{guest ? '›' : 'Get or activate ›'}</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

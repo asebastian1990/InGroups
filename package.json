@@ -8,7 +8,8 @@
     "dev:server": "npm run dev --prefix server",
     "db:push": "npm run db:push --prefix server",
     "build:all": "npm run build --prefix client",
-    "start": "npm run start --prefix server"
+    "start": "npm run start --prefix server",
+    "teams:package": "node scripts/package-teams-app.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

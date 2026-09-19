@@ -43,6 +43,27 @@ export async function initDb() {
   console.log('');
 }
 
+export async function getWordSetsForView(ownerId?: string): Promise<WordSet[]> {
+  const sets = [...FREE_WORD_SETS];
+  if (ownerId) {
+    const custom = await db
+      .select()
+      .from(customWordSets)
+      .where(eq(customWordSets.ownerId, ownerId));
+    for (const row of custom) {
+      sets.push({
+        id: row.id,
+        name: row.name,
+        words: JSON.parse(row.words),
+        isPremium: false,
+        isCustom: true,
+        ownerId: row.ownerId,
+      });
+    }
+  }
+  return sets;
+}
+
 export async function getWordSets(hasLicense: boolean, ownerId?: string): Promise<WordSet[]> {
   const sets = FREE_WORD_SETS.filter((s) => !s.isPremium || hasLicense);
   if (ownerId) {

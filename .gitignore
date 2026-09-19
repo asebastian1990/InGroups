@@ -5,3 +5,5 @@ _extract/
 .env
 .DS_Store
 shared/*.js
+teams-app/manifest.json
+teams-app/ingroups-teams.zip

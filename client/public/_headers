@@ -1,0 +1,8 @@
+/*
+  Content-Security-Policy: frame-ancestors 'self' teams.microsoft.com *.teams.microsoft.com *.skype.com *.cloud.microsoft.com teams.cloud.microsoft.com;
+
+/teams
+  Content-Security-Policy: frame-ancestors teams.microsoft.com *.teams.microsoft.com *.skype.com *.cloud.microsoft.com teams.cloud.microsoft.com outlook.office.com outlook.office365.com;
+
+/teams/*
+  Content-Security-Policy: frame-ancestors teams.microsoft.com *.teams.microsoft.com *.skype.com *.cloud.microsoft.com teams.cloud.microsoft.com outlook.office.com outlook.office365.com;

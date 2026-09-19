@@ -1,0 +1,62 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.1",
+  "id": "f8e3b2a1-4c5d-6e7f-8901-234567890abc",
+  "packageName": "com.annaliese-sebastian.ingroups",
+  "developer": {
+    "name": "Annaliese Sebastian LLC",
+    "websiteUrl": "https://YOUR-PAGES-URL",
+    "privacyUrl": "https://YOUR-PAGES-URL",
+    "termsOfUseUrl": "https://YOUR-PAGES-URL"
+  },
+  "name": {
+    "short": "InGroups",
+    "full": "InGroups Word Game"
+  },
+  "description": {
+    "short": "Align on a secret word with your group.",
+    "full": "InGroups is a multiplayer word alignment game for teams. One group tries to agree on a secret word while others listen and guess."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#262626",
+  "webApplicationInfo": {
+    "id": "YOUR-AAD-CLIENT-ID",
+    "resource": "api://YOUR-PAGES-HOST/YOUR-AAD-CLIENT-ID"
+  },
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "staticTabs": [
+    {
+      "entityId": "ingroups-personal",
+      "name": "InGroups",
+      "contentUrl": "https://YOUR-PAGES-URL/teams",
+      "websiteUrl": "https://YOUR-PAGES-URL/teams",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://YOUR-PAGES-URL/teams/config",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupchat"],
+      "context": [
+        "channelTab",
+        "privateChatTab",
+        "meetingChatTab",
+        "meetingDetailsTab",
+        "meetingSidePanel"
+      ]
+    }
+  ],
+  "validDomains": [
+    "YOUR-PAGES-HOST",
+    "YOUR-RAILWAY-HOST"
+  ],
+  "isFullScreen": false
+}

@@ -651,6 +651,12 @@ export function getWordSets(): Promise<WordSet[]> {
 
 }
 
+export function getWordSetsForView(): Promise<WordSet[]> {
+
+  return emitWithAck<WordSet[]>('getWordSets', { forView: true });
+
+}
+
 
 
 export function saveWordSet(id: string, name: string, words: string[]): Promise<{ success: boolean; error?: string }> {
@@ -736,6 +742,36 @@ export function confirmLicensePurchase(sessionId: string): Promise<LicensePurcha
   return apiRequest<LicensePurchaseSummary>('/api/licenses/confirm', {
     method: 'POST',
     body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function getTeamsSsoStatus(): Promise<boolean> {
+  const res = await fetch(`${SERVER_URL}/api/auth/status`);
+  if (!res.ok) return false;
+  const data = await res.json().catch(() => ({}));
+  return !!data.configured;
+}
+
+export async function exchangeTeamsSsoToken(
+  token: string,
+): Promise<{ signInToken: string; email: string | null; displayName: string | null }> {
+  const res = await fetch(`${SERVER_URL}/api/auth/teams`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'Teams sign-in failed');
+  }
+  return data as { signInToken: string; email: string | null; displayName: string | null };
+}
+
+export async function linkTeamsAccount(clerkUserId: string, email: string | null): Promise<void> {
+  await fetch(`${SERVER_URL}/api/auth/teams/linked`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clerkUserId, email }),
   });
 }
 

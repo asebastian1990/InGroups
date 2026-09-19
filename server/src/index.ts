@@ -6,7 +6,9 @@ import cors from 'cors';
 import { initDb } from './db.js';
 import { setupSocketHandlers } from './socket.js';
 import { licenseRouter } from './routes/licenses.js';
+import { teamsAuthRouter } from './routes/teamsAuth.js';
 import { handleStripeWebhook, stripeConfigured } from './stripe.js';
+import { teamsSsoConfigured } from './teamsAuth.js';
 
 function parseCorsOrigins(): string[] | true {
   const raw = process.env.CORS_ORIGIN?.trim();
@@ -57,9 +59,15 @@ async function start() {
   setupSocketHandlers(io);
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, database: 'neon', stripe: stripeConfigured() });
+    res.json({
+      ok: true,
+      database: 'neon',
+      stripe: stripeConfigured(),
+      teamsSso: teamsSsoConfigured(),
+    });
   });
 
+  app.use('/api/auth', teamsAuthRouter);
   app.use('/api/licenses', licenseRouter);
 
   httpServer.listen(PORT, '0.0.0.0', () => {
