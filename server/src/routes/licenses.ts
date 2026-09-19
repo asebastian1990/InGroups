@@ -50,9 +50,11 @@ licenseRouter.post('/checkout', requireClerkAuth, async (req, res) => {
     return;
   }
 
+  const returnTo = req.body?.returnTo === 'teams' ? 'teams' : 'web';
+
   try {
     const { playerId } = (req as AuthedRequest).auth;
-    const { url } = await createLicenseCheckoutSession(playerId, quantity);
+    const { url } = await createLicenseCheckoutSession(playerId, quantity, returnTo);
     res.json({ url });
   } catch (err) {
     console.error('checkout error:', err);

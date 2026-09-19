@@ -731,10 +731,13 @@ export function getLicensePurchaseSummary(): Promise<LicensePurchaseSummary> {
   return apiRequest<LicensePurchaseSummary>('/api/licenses/summary');
 }
 
-export function createLicenseCheckout(quantity: number): Promise<LicenseCheckoutResponse> {
+export function createLicenseCheckout(
+  quantity: number,
+  returnTo: 'teams' | 'web' = 'web',
+): Promise<LicenseCheckoutResponse> {
   return apiRequest<LicenseCheckoutResponse>('/api/licenses/checkout', {
     method: 'POST',
-    body: JSON.stringify({ quantity }),
+    body: JSON.stringify({ quantity, returnTo }),
   });
 }
 

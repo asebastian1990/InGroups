@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { LICENSE_MIN_QUANTITY, LICENSE_MAX_QUANTITY, LICENSE_UNIT_PRICE_CENTS } from '@shared/types';
 import { createLicenseCheckout, getLicenseShopConfig, type LicenseShopConfig } from '../api';
+import { useTeamsEmbed } from '../teams/TeamsEmbedContext';
+import { openExternalLink } from '../teams/openExternalLink';
 import { Modal } from './UI';
 
 interface Props {
@@ -21,10 +23,12 @@ function parseQuantityText(text: string): number {
 }
 
 export function LicenseShopModal({ onClose }: Props) {
+  const teamsEmbed = useTeamsEmbed();
   const [config, setConfig] = useState<LicenseShopConfig | null>(null);
   const [quantityText, setQuantityText] = useState(String(LICENSE_MIN_QUANTITY));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkoutOpenedExternally, setCheckoutOpenedExternally] = useState(false);
 
   useEffect(() => {
     getLicenseShopConfig()
@@ -50,8 +54,14 @@ export function LicenseShopModal({ onClose }: Props) {
     setLoading(true);
     setError('');
     try {
-      const { url } = await createLicenseCheckout(checkoutQuantity);
-      window.location.href = url;
+      const { url } = await createLicenseCheckout(checkoutQuantity, teamsEmbed ? 'teams' : 'web');
+      if (teamsEmbed) {
+        await openExternalLink(url);
+        setCheckoutOpenedExternally(true);
+        setLoading(false);
+      } else {
+        window.location.href = url;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start checkout');
       setLoading(false);
@@ -117,6 +127,13 @@ export function LicenseShopModal({ onClose }: Props) {
       )}
 
       {error && <p className="error-msg">{error}</p>}
+
+      {checkoutOpenedExternally && (
+        <p className="info-msg">
+          Checkout opened in your browser. Complete payment there, then return to this Teams tab and
+          refresh the License page to see your keys.
+        </p>
+      )}
 
       <div className="modal-actions">
         <button type="button" className="btn" onClick={onClose} disabled={loading}>

@@ -33,7 +33,8 @@ function appBaseUrl(): string {
 
 export async function createLicenseCheckoutSession(
   buyerClerkId: string,
-  quantity: number
+  quantity: number,
+  returnTo: 'teams' | 'web' = 'web',
 ): Promise<{ url: string; orderId: string }> {
   const stripe = getStripe();
   const { orderId, quantity: qty, unitPriceCents } = await createPendingLicenseOrder(
@@ -61,8 +62,8 @@ export async function createLicenseCheckoutSession(
       buyerClerkId,
       quantity: String(qty),
     },
-    success_url: `${appBaseUrl()}/?view=license&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appBaseUrl()}/?view=license&purchase=cancelled`,
+    success_url: `${appBaseUrl()}${returnTo === 'teams' ? '/teams' : ''}?view=license&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appBaseUrl()}${returnTo === 'teams' ? '/teams' : ''}?view=license&purchase=cancelled`,
   });
 
   if (!session.url) {
