@@ -127,6 +127,12 @@ export function LandingScreen({ teamsEmbed = false, onEnter, onNavigate }: Props
           </>
         )}
       </div>
+
+      <nav className="landing-legal-links" aria-label="Legal">
+        <a href="/privacypolicy">Privacy Policy</a>
+        <span aria-hidden="true">·</span>
+        <a href="/termsofuse">Terms of Use</a>
+      </nav>
     </div>
   );
 }

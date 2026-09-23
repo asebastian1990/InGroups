@@ -100,9 +100,40 @@ You still need:
 - [x] Auto-create Clerk user by Teams email; link Neon user row for licenses / shop
 - [x] Teams banner: “Signed in with Microsoft Teams” when SSO succeeds
 
-### A8. Production (much later)
+### A8. Production / Teams Store (much later)
 
-- [ ] Teams Store / org admin deployment (Kahoot model — players use their own orgs, no license on your tenant)
+Full roadmap: **[teams-app/GO-LIVE.md](./teams-app/GO-LIVE.md)**
+
+- [ ] **Manifest copy & legal URLs** — [teams-app/PRE-LAUNCH.md](./teams-app/PRE-LAUNCH.md)
+- [ ] Railway paid, Stripe live, production domains
+- [ ] Partner Center + Teams Store submission
+- [ ] Kahoot model — external orgs install from Store; players use their own tenants
+
+### A9. Meeting apps — how to add InGroups (read this)
+
+**Known Teams behavior:** Custom/org apps often **do not appear** in the in-meeting **Apps** picker or the calendar invite **Apps** list — even when published correctly. This affects many sideloaded apps, not just InGroups. Microsoft’s own meeting sample uses a different flow.
+
+#### Method that works today (Microsoft-documented)
+
+1. **Calendar** → schedule a meeting (must exist before step 2).
+2. Left sidebar **Apps** → search **InGroups** (Built for your org).
+3. On the InGroups app page, click **Add** (or the **▼** next to Add) → **Add to a meeting**.
+4. Select your scheduled meeting → **Set up a tab** → **Save** (config page may appear briefly).
+5. **Join** the meeting → click the **InGroups** tab in the meeting toolbar → side panel opens.
+
+#### If InGroups doesn’t appear in left-sidebar Apps
+
+- Admin Center → InGroups → **Users and groups** → **Edit availability** → **Everyone** + **Install**.
+- Confirm status is **Allowed**, not Blocked.
+- Re-upload manifest **v1.0.2+** (adds meeting `staticTabs` per Microsoft hello-world-in-meeting sample).
+- Propagation can take up to 24 hours.
+
+#### What usually does *not* work for custom apps
+
+- Browsing “Added by your organization” during a call (often only Copilot / featured apps).
+- In-meeting **Apps** search (Store apps dominate).
+
+**Meeting type reminder:** Instant **channel** Meet now (e.g. General) does not support apps. Use **Calendar** Meet now or a **scheduled** meeting.
 
 ---
 

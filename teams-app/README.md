@@ -2,6 +2,8 @@
 
 Sideload package for Microsoft Teams (development).
 
+**Production subdomain cutover:** [PRE-LAUNCH.md](./PRE-LAUNCH.md) (`ingroups.annaliese-sebastian.com`).
+
 ## Before packaging
 
 1. Deploy the client to Cloudflare Pages (with `/teams` route live).
@@ -40,11 +42,23 @@ zip -j ingroups-teams.zip manifest.json color.png outline.png
 
 On Mac, select the three files → Compress (ensure `manifest.json` is not inside a subfolder).
 
-## Sideload
+## Sideload (personal tab — dev)
 
 1. Teams → **Apps → Manage your apps → Upload an app → Upload a custom app**
 2. Select `ingroups-teams.zip`
-3. Test **Personal** tab first, then add to a **meeting side panel**
+3. Test **Personal** tab first
+
+## Meetings (org catalog — required for in-call Apps menu)
+
+Personal sideload does **not** put the app in the meeting **Apps** gallery. Upload the same zip in **[Teams Admin Center → Teams apps → Manage apps → Upload new app](https://admin.teams.microsoft.com)**.
+
+If InGroups doesn’t appear **during a call’s Apps menu**, that’s normal for custom apps. Use **Apps (sidebar) → InGroups → Add → Add to a meeting** before joining. See **INTEGRATIONS-SETUP.md → A9**.
+
+Re-upload manifest **v1.0.2+** in Admin Center after `npm run teams:package` (adds meeting static tab per Microsoft’s meeting sample).
+
+## Before go-live
+
+See **[PRE-LAUNCH.md](./PRE-LAUNCH.md)** — update privacy URL, terms URL, short/long description in the manifest before Store or public org release.
 
 ## Scopes in this manifest
 
