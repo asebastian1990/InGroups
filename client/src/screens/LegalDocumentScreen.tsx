@@ -21,7 +21,6 @@ export function LegalDocumentScreen({ document }: Props) {
       </header>
 
       <main className="legal-main">
-        <p className="legal-eyebrow">{document.title}</p>
         <h1 className="legal-title">{document.title}</h1>
         {document.lastUpdated && (
           <p className="legal-updated">Last updated: {document.lastUpdated}</p>

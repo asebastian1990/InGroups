@@ -1,7 +1,3 @@
-# Privacy Policy — InGroups
-
-**Last updated:** September 22, 2026
-
 Annaliese Sebastian LLC ("**we**," "**us**," or "**our**") operates **InGroups**, a multiplayer word game available on the web and through embedded integrations in third-party meeting and collaboration platforms (such as Microsoft Teams, Zoom, Google Meet, and others we may support from time to time) (collectively, the "**Service**"). This Privacy Policy describes how we collect, use, and share information when you use the Service at **https://ingroups.annaliese-sebastian.com** and related pages.
 
 This policy applies to InGroups. Our general company privacy practices for other products may be described separately at **https://annaliese-sebastian.com**.
@@ -157,7 +153,3 @@ If you have questions about this Privacy Policy or our data practices for InGrou
 Email: **contact@annaliese-sebastian.com**  
 Phone: **(510) 431-9455**  
 Website: **https://annaliese-sebastian.com**
-
----
-
-*This document is provided for operational and marketplace listing purposes. It is not legal advice.*

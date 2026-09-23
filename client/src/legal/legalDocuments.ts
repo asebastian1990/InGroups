@@ -11,24 +11,20 @@ export interface LegalDocument {
   markdown: string;
 }
 
-function extractLastUpdated(markdown: string): string {
-  const match = markdown.match(/\*\*Last updated:\*\*\s*(.+)/i);
-  return match?.[1]?.trim() ?? '';
-}
-
+/** Update lastUpdated here when you revise the markdown files. */
 export const legalDocuments: Record<LegalDocumentId, LegalDocument> = {
   privacy: {
     id: 'privacy',
     path: '/privacypolicy',
     title: 'Privacy Policy',
-    lastUpdated: extractLastUpdated(privacyMarkdown),
+    lastUpdated: 'September 22, 2026',
     markdown: privacyMarkdown,
   },
   terms: {
     id: 'terms',
     path: '/termsofuse',
     title: 'Terms of Use',
-    lastUpdated: extractLastUpdated(termsMarkdown),
+    lastUpdated: 'September 22, 2026',
     markdown: termsMarkdown,
   },
 };

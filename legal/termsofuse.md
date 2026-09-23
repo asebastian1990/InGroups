@@ -1,7 +1,3 @@
-# Terms of Use — InGroups
-
-**Last updated:** September 22, 2026
-
 These Terms of Use ("**Terms**") govern your access to and use of **InGroups**, a multiplayer word game operated by **Annaliese Sebastian LLC** ("**we**," "**us**," or "**our**") at **https://ingroups.annaliese-sebastian.com**, including the web application, embedded experiences in third-party meeting and collaboration platforms (such as Microsoft Teams, Zoom, Google Meet, and others we may support), and related services (collectively, the "**Service**").
 
 By accessing or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
@@ -208,7 +204,3 @@ Questions about these Terms:
 Email: **contact@annaliese-sebastian.com**  
 Phone: **(510) 431-9455**  
 Website: **https://annaliese-sebastian.com**
-
----
-
-*This document is provided for operational and marketplace listing purposes. It is not legal advice.*
