@@ -4,6 +4,7 @@ import { TeamsAuthBootstrap } from './TeamsAuthBootstrap';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const SIGN_IN_PATH = '/sign-in';
+const SIGN_UP_PATH = '/sign-up';
 
 export function TeamsProviders({ children }: { children: ReactNode }) {
   if (!publishableKey) {
@@ -20,7 +21,7 @@ export function TeamsProviders({ children }: { children: ReactNode }) {
     <ClerkProvider
       publishableKey={publishableKey}
       signInUrl={SIGN_IN_PATH}
-      signUpUrl={SIGN_IN_PATH}
+      signUpUrl={SIGN_UP_PATH}
       allowedRedirectOrigins={[window.location.origin]}
     >
       <TeamsAuthBootstrap>{children}</TeamsAuthBootstrap>

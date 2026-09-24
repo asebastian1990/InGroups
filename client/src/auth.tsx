@@ -2,6 +2,7 @@ import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
   SignIn,
+  SignUp,
   useAuth,
 } from '@clerk/clerk-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -9,6 +10,7 @@ import { configureAuth, configureGuestAuth, isGuestMode, resetAuth } from './api
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const SIGN_IN_PATH = '/sign-in';
+const SIGN_UP_PATH = '/sign-up';
 const APP_HOME = '/';
 
 const signInAppearance = {
@@ -37,6 +39,14 @@ function isSignInPath(): boolean {
   return window.location.pathname.startsWith(SIGN_IN_PATH);
 }
 
+function isSignUpPath(): boolean {
+  return window.location.pathname.startsWith(SIGN_UP_PATH);
+}
+
+function isAuthPath(): boolean {
+  return isSignInPath() || isSignUpPath() || isSsoCallbackPath();
+}
+
 function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
   return (
     <div className="app app--auth">
@@ -48,9 +58,34 @@ function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) 
             oauthFlow="redirect"
             appearance={signInAppearance}
             signInUrl={SIGN_IN_PATH}
-            signUpUrl={SIGN_IN_PATH}
+            signUpUrl={SIGN_UP_PATH}
             fallbackRedirectUrl={APP_HOME}
             signUpFallbackRedirectUrl={APP_HOME}
+          />
+        </div>
+        <div className="guest-auth">
+          <button type="button" className="btn" onClick={onContinueAsGuest}>
+            Continue as Guest
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SignUpScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+  return (
+    <div className="app app--auth">
+      <main className="app-content auth-screen">
+        <div className="auth-clerk">
+          <SignUp
+            routing="path"
+            path={SIGN_UP_PATH}
+            oauthFlow="redirect"
+            appearance={signInAppearance}
+            signInUrl={SIGN_IN_PATH}
+            fallbackRedirectUrl={APP_HOME}
+            signInFallbackRedirectUrl={APP_HOME}
           />
         </div>
         <div className="guest-auth">
@@ -82,14 +117,14 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (guestActive || !isLoaded || isSignedIn) return;
-    if (isSignInPath() || isSsoCallbackPath()) return;
+    if (isAuthPath()) return;
     window.location.replace(SIGN_IN_PATH);
   }, [guestActive, isLoaded, isSignedIn]);
 
   const continueAsGuest = () => {
     configureGuestAuth();
     setGuestActive(true);
-    if (isSignInPath()) {
+    if (isSignInPath() || isSignUpPath()) {
       window.history.replaceState(null, '', APP_HOME);
     }
   };
@@ -106,7 +141,7 @@ function AuthGate({ children }: { children: ReactNode }) {
         <main className="app-content auth-screen">
           <AuthenticateWithRedirectCallback
             signInUrl={SIGN_IN_PATH}
-            signUpUrl={SIGN_IN_PATH}
+            signUpUrl={SIGN_UP_PATH}
             signInFallbackRedirectUrl={APP_HOME}
             signUpFallbackRedirectUrl={APP_HOME}
           />
@@ -117,6 +152,10 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   if (isSignedIn) {
     return <>{children}</>;
+  }
+
+  if (isSignUpPath()) {
+    return <SignUpScreen onContinueAsGuest={continueAsGuest} />;
   }
 
   if (!isSignInPath()) {
@@ -143,7 +182,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ClerkProvider
       publishableKey={publishableKey}
       signInUrl={SIGN_IN_PATH}
-      signUpUrl={SIGN_IN_PATH}
+      signUpUrl={SIGN_UP_PATH}
       signInFallbackRedirectUrl={APP_HOME}
       signUpFallbackRedirectUrl={APP_HOME}
       afterSignOutUrl={SIGN_IN_PATH}

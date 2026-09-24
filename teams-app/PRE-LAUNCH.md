@@ -137,9 +137,9 @@ Keep the Development instance for local work; create and configure **Production*
 | Field | Production value |
 |-------|------------------|
 | Sign-in URL | `https://ingroups.annaliese-sebastian.com/sign-in` |
-| Sign-up URL | `https://ingroups.annaliese-sebastian.com/sign-in` |
+| Sign-up URL | `https://ingroups.annaliese-sebastian.com/sign-up` |
 
-InGroups uses embedded `<SignIn>` on `/sign-in` (see `client/src/auth.tsx`). Do **not** point users at Clerk Account Portal for normal sign-in.
+InGroups uses embedded `<SignIn>` on `/sign-in` and `<SignUp>` on `/sign-up` (see `client/src/auth.tsx`). Do **not** point users at Clerk Account Portal for normal sign-in.
 
 **Configure → Account Portal → Redirects** (fallbacks only — use **relative** paths):
 
@@ -160,12 +160,35 @@ Add `https://ingroups.annaliese-sebastian.com/*` only if the dashboard accepts w
 
 Development’s shared Google credentials are **not** valid for public launch.
 
-1. [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → **Credentials** → create or reuse an **OAuth 2.0 Client ID** (Web application)
-2. **Clerk Production → Configure → User & authentication → Social connections → Google**
-3. Enable Google and paste your **Client ID** and **Client secret**
-4. Copy Clerk’s **Authorized redirect URI** from that page into Google’s **Authorized redirect URIs**
+**Google Cloud — [Google Auth Platform](https://console.cloud.google.com/auth/overview)** (project e.g. **InGroups**):
+
+1. **Get started** — app name + support/contact email (minimal wizard).
+2. **Audience** — **External** → **Publish app** when ready (removes test-user cap).
+3. **Branding** — home page `https://ingroups.annaliese-sebastian.com`, privacy/terms URLs, authorized domain `annaliese-sebastian.com`.
+4. **Data Access** — add non-sensitive scopes only: `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`.
+5. **Clients → Create client → Web application**:
+   - **Authorized JavaScript origins:** `https://ingroups.annaliese-sebastian.com`, `https://clerk.annaliese-sebastian.com`
+   - **Authorized redirect URIs:** leave empty until step 8 (paste from Clerk)
+6. Copy **Client ID** and **Client secret**.
+
+**Clerk Production:**
+
+7. **Configure → User & authentication → Social connections → Google** — enable, **Use custom credentials**, paste Client ID + secret → **Save**.
+8. Copy Clerk’s **Authorized redirect URI** → Google **Clients → your client → Authorized redirect URIs** → **Save**.
 
 Repeat for any other social providers you enable in Production.
+
+#### 4e-b — Google brand verification (later — not blocking sign-in)
+
+With only basic identity scopes (`openid`, email, profile), Google sign-in **works without full OAuth scope verification**. After **Publish app**, Google may still prompt for **brand verification** (**Verification Center** or **Branding → Verify branding**) so **InGroups** and your logo appear on the consent screen instead of only your domain.
+
+| When | What |
+|------|------|
+| **Now** | Finish OAuth client + Clerk hookup; test sign-in after live keys (4f, 4h) |
+| **Before Teams Store / public marketing** | Complete brand verification; verify `annaliese-sebastian.com` in [Google Search Console](https://search.google.com/search-console) if prompted |
+| **Not required for InGroups** | Full OAuth scope verification (only needed for Gmail, Drive, Calendar, etc.) |
+
+Until brand verification completes, users may see a generic or “unverified app” consent screen — **sign-in still works**.
 
 ### 4f — Swap API keys (Cloudflare + Railway)
 
@@ -181,7 +204,7 @@ Also set on **Cloudflare Pages** (Production) if not already:
 | Variable | Value |
 |----------|--------|
 | `VITE_CLERK_SIGN_IN_URL` | `/sign-in` |
-| `VITE_CLERK_SIGN_UP_URL` | `/sign-in` |
+| `VITE_CLERK_SIGN_UP_URL` | `/sign-up` |
 | `VITE_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/` |
 | `VITE_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/` |
 
