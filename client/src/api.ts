@@ -748,6 +748,24 @@ export function confirmLicensePurchase(sessionId: string): Promise<LicensePurcha
   });
 }
 
+export async function syncAuthenticatedUser(
+  getToken: () => Promise<string | null>,
+): Promise<{ clerkUserId: string; userId: string }> {
+  const token = await getToken();
+  if (!token) {
+    throw new Error('Not signed in');
+  }
+
+  const res = await fetch(`${SERVER_URL}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'Failed to sync account');
+  }
+  return data as { clerkUserId: string; userId: string };
+}
+
 export async function getTeamsSsoStatus(): Promise<boolean> {
   const res = await fetch(`${SERVER_URL}/api/auth/status`);
   if (!res.ok) return false;
@@ -769,13 +787,4 @@ export async function exchangeTeamsSsoToken(
   }
   return data as { signInToken: string; email: string | null; displayName: string | null };
 }
-
-export async function linkTeamsAccount(clerkUserId: string, email: string | null): Promise<void> {
-  await fetch(`${SERVER_URL}/api/auth/teams/linked`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clerkUserId, email }),
-  });
-}
-
 

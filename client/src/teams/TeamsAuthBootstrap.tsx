@@ -1,7 +1,13 @@
 import { useAuth, useSignIn } from '@clerk/clerk-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { authentication } from '@microsoft/teams-js';
-import { configureAuth, configureGuestAuth, exchangeTeamsSsoToken, getTeamsSsoStatus, linkTeamsAccount } from '../api';
+import {
+  configureAuth,
+  configureGuestAuth,
+  exchangeTeamsSsoToken,
+  getTeamsSsoStatus,
+  syncAuthenticatedUser,
+} from '../api';
 import { initTeamsClient } from './initTeams';
 import { TeamsEmbedProvider } from './TeamsEmbedContext';
 import type { TeamsProfile } from './types';
@@ -18,7 +24,7 @@ function LoadingScreen() {
 }
 
 export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
@@ -37,6 +43,9 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       try {
         if (isSignedIn) {
           configureAuth(() => getToken());
+          await syncAuthenticatedUser(getToken).catch((err) => {
+            console.warn('Failed to sync account with server:', err);
+          });
           nextProfile = {
             ...nextProfile,
             signedInWithTeams: true,
@@ -60,6 +69,9 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
               await setActive!({ session: attempt.createdSessionId });
               configureAuth(() => getToken());
+              await syncAuthenticatedUser(getToken).catch((err) => {
+                console.warn('Failed to sync account with server:', err);
+              });
 
               nextProfile = {
                 ...nextProfile,
@@ -94,13 +106,6 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [isLoaded, signInLoaded, isSignedIn, getToken, signIn, setActive]);
-
-  useEffect(() => {
-    if (!ready || !isSignedIn || !userId || !profile.signedInWithTeams) return;
-    linkTeamsAccount(userId, profile.signedInEmail).catch((err) => {
-      console.warn('Failed to link Teams account row:', err);
-    });
-  }, [ready, isSignedIn, userId, profile.signedInWithTeams, profile.signedInEmail]);
 
   if (!ready) return <LoadingScreen />;
 

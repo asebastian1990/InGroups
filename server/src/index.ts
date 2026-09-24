@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { initDb } from './db.js';
 import { setupSocketHandlers } from './socket.js';
+import { authRouter } from './routes/auth.js';
 import { licenseRouter } from './routes/licenses.js';
 import { teamsAuthRouter } from './routes/teamsAuth.js';
 import { handleStripeWebhook, stripeConfigured } from './stripe.js';
@@ -68,6 +69,7 @@ async function start() {
   });
 
   app.use('/api/auth', teamsAuthRouter);
+  app.use('/api/auth', authRouter);
   app.use('/api/licenses', licenseRouter);
 
   httpServer.listen(PORT, '0.0.0.0', () => {

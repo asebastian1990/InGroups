@@ -6,7 +6,13 @@ import {
   useAuth,
 } from '@clerk/clerk-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { configureAuth, configureGuestAuth, isGuestMode, resetAuth } from './api';
+import {
+  configureAuth,
+  configureGuestAuth,
+  isGuestMode,
+  resetAuth,
+  syncAuthenticatedUser,
+} from './api';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const SIGN_IN_PATH = '/sign-in';
@@ -110,6 +116,9 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     if (isSignedIn) {
       configureAuth(() => getToken());
+      syncAuthenticatedUser(getToken).catch((err) => {
+        console.warn('Failed to sync account with server:', err);
+      });
     } else {
       resetAuth();
     }
