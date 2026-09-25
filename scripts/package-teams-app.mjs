@@ -35,11 +35,20 @@ if (!aadClientId) {
 
 const appUri = aadClientId ? `api://${pagesHost}/${aadClientId}` : `api://YOUR-PAGES-HOST/YOUR-AAD-CLIENT-ID`;
 
+function rootDomain(host) {
+  const parts = host.split('.').filter(Boolean);
+  if (parts.length <= 2) return host;
+  return parts.slice(-2).join('.');
+}
+
+const pagesRootDomain = rootDomain(pagesHost);
+
 const template = readFileSync(join(teamsDir, 'manifest.template.json'), 'utf8');
 let manifest = template
   .replaceAll('https://YOUR-PAGES-URL', pagesUrl)
   .replaceAll('YOUR-PAGES-HOST', pagesHost)
   .replaceAll('YOUR-RAILWAY-HOST', railwayHost)
+  .replaceAll('YOUR-ROOT-DOMAIN', pagesRootDomain)
   .replaceAll('YOUR-AAD-CLIENT-ID', aadClientId || 'YOUR-AAD-CLIENT-ID')
   .replaceAll('api://YOUR-PAGES-HOST/YOUR-AAD-CLIENT-ID', appUri);
 

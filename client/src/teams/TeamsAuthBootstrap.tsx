@@ -12,12 +12,17 @@ import { initTeamsClient } from './initTeams';
 import { TeamsEmbedProvider } from './TeamsEmbedContext';
 import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
+import { withTimeout } from './withTimeout';
 
-function LoadingScreen() {
+const CLERK_LOAD_TIMEOUT_MS = 12_000;
+const TEAMS_SSO_TOKEN_TIMEOUT_MS = 15_000;
+
+function LoadingScreen({ detail }: { detail?: string }) {
   return (
     <div className="app app--teams">
       <main className="app-content auth-screen">
         <p className="muted">Connecting to Microsoft Teams…</p>
+        {detail && <p className="auth-form-lead">{detail}</p>}
       </main>
     </div>
   );
@@ -28,10 +33,20 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
+  const [clerkTimedOut, setClerkTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded || !signInLoaded) return;
+    if (isLoaded && signInLoaded) return;
 
+    const timer = window.setTimeout(() => {
+      console.warn('[teams-auth] Clerk did not load in time; continuing in guest mode.');
+      setClerkTimedOut(true);
+    }, CLERK_LOAD_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoaded, signInLoaded]);
+
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
@@ -39,6 +54,16 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       let nextProfile: TeamsProfile = { ...ctxProfile };
+      setProfile(nextProfile);
+
+      const clerkReady = isLoaded && signInLoaded;
+      if (!clerkReady && !clerkTimedOut) return;
+
+      if (!clerkReady) {
+        configureGuestAuth();
+        if (!cancelled) setReady(true);
+        return;
+      }
 
       try {
         if (isSignedIn) {
@@ -55,7 +80,11 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
           const ssoEnabled = await getTeamsSsoStatus();
           if (ssoEnabled && ctxProfile.inTeams) {
             try {
-              const teamsToken = await authentication.getAuthToken();
+              const teamsToken = await withTimeout(
+                authentication.getAuthToken(),
+                TEAMS_SSO_TOKEN_TIMEOUT_MS,
+                'Teams SSO token',
+              );
               const { signInToken, email, displayName } = await exchangeTeamsSsoToken(teamsToken);
 
               if (!signIn) {
@@ -105,9 +134,19 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, signInLoaded, isSignedIn, getToken, signIn, setActive]);
+  }, [isLoaded, signInLoaded, clerkTimedOut, isSignedIn, getToken, signIn, setActive]);
 
-  if (!ready) return <LoadingScreen />;
+  if (!ready) {
+    return (
+      <LoadingScreen
+        detail={
+          clerkTimedOut
+            ? 'Authentication is taking longer than expected…'
+            : undefined
+        }
+      />
+    );
+  }
 
   return <TeamsEmbedProvider profile={profile}>{children}</TeamsEmbedProvider>;
 }

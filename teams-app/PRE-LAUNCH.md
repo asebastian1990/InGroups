@@ -225,6 +225,7 @@ On `https://ingroups.annaliese-sebastian.com`:
 2. Confirm redirect lands on `/` (not `*.accounts.dev` or a Clerk error)
 3. Host a game — socket auth must succeed (Railway `sk_live_` matches client `pk_live_`)
 4. Open `/teams` → Teams SSO banner still works (Azure/Railway; independent of Clerk dev/prod, but Railway must use Production `CLERK_SECRET_KEY`)
+5. **Re-upload the Teams app package** after Clerk Production — the manifest must list Clerk domains in `validDomains` or the Teams iframe blocks Clerk JS and the tab hangs on “Connecting to Microsoft Teams…”
 
 ---
 
@@ -273,7 +274,7 @@ This sets:
 
 | Manifest field                | Result                                                                   |
 | ----------------------------- | ------------------------------------------------------------------------ |
-| `validDomains`                | `ingroups.annaliese-sebastian.com`, `ingroups-production.up.railway.app` |
+| `validDomains`                | `ingroups.annaliese-sebastian.com`, `ingroups-production.up.railway.app`, `clerk.annaliese-sebastian.com`, `accounts.annaliese-sebastian.com`, `clerk.com` (required for Production Clerk inside the Teams iframe) |
 | `webApplicationInfo.resource` | `api://ingroups.annaliese-sebastian.com/d9a7e57e-...`                    |
 | Tab URLs                      | `.../teams`, `.../teams/config`                                          |
 | Legal URLs                    | `.../privacypolicy`, `.../termsofuse`                                    |

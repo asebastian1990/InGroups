@@ -70,7 +70,10 @@
   ],
   "validDomains": [
     "YOUR-PAGES-HOST",
-    "YOUR-RAILWAY-HOST"
+    "YOUR-RAILWAY-HOST",
+    "clerk.YOUR-ROOT-DOMAIN",
+    "accounts.YOUR-ROOT-DOMAIN",
+    "clerk.com"
   ],
   "isFullScreen": false
 }
