@@ -1,17 +1,23 @@
 import { useSignUp } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { formatClerkError } from './clerkErrors';
-import { APP_HOME, SIGN_IN_PATH, signUpOAuthRedirectUrl } from './paths';
-import { resendSignUpEmailLink, sendSignUpEmailLinkOnce } from './signUpEmailLink';
+import { APP_HOME, SIGN_IN_PATH } from './paths';
+import {
+  preferredVerificationStrategy,
+  resendSignUpVerification,
+  sendSignUpVerificationOnce,
+  type SignUpVerificationStrategy,
+} from './signUpVerification';
 
-type Step = 'form' | 'check-email';
+type Step = 'form' | 'verify-code' | 'check-email';
 
 export function CustomSignUpScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const submittingRef = useRef(false);
   const [step, setStep] = useState<Step>('form');
+  const [verificationStrategy, setVerificationStrategy] = useState<SignUpVerificationStrategy>('email_code');
   const [emailAddress, setEmailAddress] = useState('');
-  const [password, setPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
@@ -38,6 +44,14 @@ export function CustomSignUpScreen() {
     };
   }, [step, signUp, setActive]);
 
+  async function completeSignUp() {
+    if (!signUp || !setActive || signUp.status !== 'complete' || !signUp.createdSessionId) {
+      throw new Error('Sign-up is not complete yet.');
+    }
+    await setActive({ session: signUp.createdSessionId });
+    window.location.replace(APP_HOME);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!isLoaded || !signUp || submittingRef.current) return;
@@ -48,9 +62,10 @@ export function CustomSignUpScreen() {
     setResent(false);
 
     try {
-      await signUp.create({ emailAddress: emailAddress.trim(), password });
-      await sendSignUpEmailLinkOnce(signUp);
-      setStep('check-email');
+      await signUp.create({ emailAddress: emailAddress.trim() });
+      const strategy = await sendSignUpVerificationOnce(signUp);
+      setVerificationStrategy(strategy);
+      setStep(strategy === 'email_link' ? 'check-email' : 'verify-code');
     } catch (err) {
       setError(formatClerkError(err));
     } finally {
@@ -59,20 +74,21 @@ export function CustomSignUpScreen() {
     }
   }
 
-  async function handleGoogleSignUp() {
-    if (!isLoaded || !signUp || busy) return;
+  async function handleVerifyCode(event: FormEvent) {
+    event.preventDefault();
+    if (!isLoaded || !signUp || submittingRef.current) return;
 
+    submittingRef.current = true;
     setBusy(true);
     setError('');
 
     try {
-      await signUp.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: signUpOAuthRedirectUrl(),
-        redirectUrlComplete: `${window.location.origin}${APP_HOME}`,
-      });
+      await signUp.attemptEmailAddressVerification({ code: verificationCode.trim() });
+      await completeSignUp();
     } catch (err) {
       setError(formatClerkError(err));
+    } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   }
@@ -85,7 +101,8 @@ export function CustomSignUpScreen() {
     setResent(false);
 
     try {
-      await resendSignUpEmailLink(signUp);
+      const strategy = verificationStrategy || preferredVerificationStrategy(signUp);
+      await resendSignUpVerification(signUp, strategy);
       setResent(true);
     } catch (err) {
       setError(formatClerkError(err));
@@ -96,12 +113,57 @@ export function CustomSignUpScreen() {
 
   function handleRestart() {
     setStep('form');
+    setVerificationCode('');
     setError('');
     setResent(false);
   }
 
   if (!isLoaded) {
     return <p className="muted">Loading…</p>;
+  }
+
+  if (step === 'verify-code') {
+    return (
+      <div className="auth-form">
+        <h1 className="auth-form-title">Check your email</h1>
+        <p className="auth-form-lead">
+          Enter the verification code sent to <strong>{emailAddress.trim()}</strong>.
+        </p>
+        <form className="auth-form-fields" onSubmit={handleVerifyCode}>
+          <label className="input-label" htmlFor="sign-up-code">
+            Verification code
+          </label>
+          <input
+            id="sign-up-code"
+            className="input"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={verificationCode}
+            onChange={(event) => setVerificationCode(event.target.value)}
+            required
+          />
+          {error && <p className="error-msg">{error}</p>}
+          {resent && <p className="auth-form-note">A new code has been sent.</p>}
+          <button type="submit" className="btn btn-primary auth-form-submit" disabled={busy}>
+            {busy ? 'Verifying…' : 'Continue'}
+          </button>
+        </form>
+        <div className="auth-form-actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={handleResend}
+            disabled={resendBusy}
+          >
+            {resendBusy ? 'Sending…' : 'Resend code'}
+          </button>
+          <button type="button" className="auth-reset-link" onClick={handleRestart}>
+            Use a different email
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (step === 'check-email') {
@@ -134,7 +196,6 @@ export function CustomSignUpScreen() {
   return (
     <div className="auth-form">
       <h1 className="auth-form-title">Create account</h1>
-      <p className="auth-form-lead">Sign up with email or continue with Google.</p>
 
       <form className="auth-form-fields" onSubmit={handleSubmit}>
         <label className="input-label" htmlFor="sign-up-email">
@@ -150,43 +211,17 @@ export function CustomSignUpScreen() {
           required
         />
 
-        <label className="input-label" htmlFor="sign-up-password">
-          Password
-        </label>
-        <input
-          id="sign-up-password"
-          className="input"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-
         {error && <p className="error-msg">{error}</p>}
 
         <button type="submit" className="btn btn-primary auth-form-submit" disabled={busy}>
-          {busy ? 'Continuing…' : 'Continue'}
+          {busy ? 'Creating account…' : 'Create Account'}
         </button>
       </form>
 
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
-
-      <button
-        type="button"
-        className="btn auth-oauth-btn"
-        onClick={handleGoogleSignUp}
-        disabled={busy}
-      >
-        Continue with Google
-      </button>
-
       <p className="auth-form-footer">
-        Already have an account?{' '}
+        Sign up with email or{' '}
         <a className="auth-footer-link" href={SIGN_IN_PATH}>
-          Sign in
+          sign in another way
         </a>
       </p>
 

@@ -48,19 +48,23 @@ function LoadingScreen() {
 function AuthScreenLayout({
   children,
   onContinueAsGuest,
+  showGuest = true,
 }: {
   children: ReactNode;
   onContinueAsGuest: () => void;
+  showGuest?: boolean;
 }) {
   return (
     <div className="app app--auth">
       <main className="app-content auth-screen">
         <div className="auth-clerk">{children}</div>
-        <div className="guest-auth">
-          <button type="button" className="btn" onClick={onContinueAsGuest}>
-            Continue as Guest
-          </button>
-        </div>
+        {showGuest && (
+          <div className="guest-auth">
+            <button type="button" className="btn" onClick={onContinueAsGuest}>
+              Continue as Guest
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -85,7 +89,7 @@ function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) 
 
 function SignUpScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
   return (
-    <AuthScreenLayout onContinueAsGuest={onContinueAsGuest}>
+    <AuthScreenLayout onContinueAsGuest={onContinueAsGuest} showGuest={false}>
       <CustomSignUpScreen />
     </AuthScreenLayout>
   );
