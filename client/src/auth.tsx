@@ -5,7 +5,7 @@ import {
   SignUp,
   useAuth,
 } from '@clerk/clerk-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   configureAuth,
   configureGuestAuth,
@@ -106,7 +106,20 @@ function SignUpScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) 
 
 function AuthGate({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const wasSignedInRef = useRef(isSignedIn);
   const [guestActive, setGuestActive] = useState(() => isGuestMode());
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.debug('[auth]', {
+        isLoaded,
+        isSignedIn,
+        path: window.location.pathname,
+      });
+    }
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (guestActive) {
@@ -114,15 +127,18 @@ function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
     if (!isLoaded) return;
+
     if (isSignedIn) {
-      configureAuth(() => getToken());
-      syncAuthenticatedUser(getToken).catch((err) => {
+      configureAuth(() => getTokenRef.current());
+      syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
         console.warn('Failed to sync account with server:', err);
       });
-    } else {
+    } else if (wasSignedInRef.current) {
       resetAuth();
     }
-  }, [guestActive, isLoaded, isSignedIn, getToken]);
+
+    wasSignedInRef.current = isSignedIn;
+  }, [guestActive, isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (guestActive || !isLoaded || isSignedIn) return;
@@ -142,7 +158,10 @@ function AuthGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!isLoaded) return <LoadingScreen />;
+  if (isSignedIn) {
+    if (!isLoaded) return <LoadingScreen />;
+    return <>{children}</>;
+  }
 
   if (isSsoCallbackPath()) {
     return (
@@ -159,19 +178,19 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isSignedIn) {
-    return <>{children}</>;
-  }
-
+  // Keep Clerk sign-in/up mounted on auth routes. Swapping to LoadingScreen while
+  // Clerk revalidates remounts <SignUp>/<SignIn> and can resend verification codes.
   if (isSignUpPath()) {
     return <SignUpScreen onContinueAsGuest={continueAsGuest} />;
   }
 
-  if (!isSignInPath()) {
-    return <LoadingScreen />;
+  if (isSignInPath()) {
+    return <SignInScreen onContinueAsGuest={continueAsGuest} />;
   }
 
-  return <SignInScreen onContinueAsGuest={continueAsGuest} />;
+  if (!isLoaded) return <LoadingScreen />;
+
+  return <LoadingScreen />;
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
