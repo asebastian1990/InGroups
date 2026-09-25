@@ -2,7 +2,6 @@ import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
   SignIn,
-  SignUp,
   useAuth,
 } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -13,11 +12,20 @@ import {
   resetAuth,
   syncAuthenticatedUser,
 } from './api';
+import { CustomSignUpScreen } from './auth/CustomSignUpScreen';
+import { SignUpVerifyScreen } from './auth/SignUpVerifyScreen';
+import {
+  APP_HOME,
+  SIGN_IN_PATH,
+  SIGN_UP_PATH,
+  isAuthPath,
+  isSignInPath,
+  isSignUpFormPath,
+  isSignUpVerifyPath,
+  isSsoCallbackPath,
+} from './auth/paths';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const SIGN_IN_PATH = '/sign-in';
-const SIGN_UP_PATH = '/sign-up';
-const APP_HOME = '/';
 
 const signInAppearance = {
   elements: {
@@ -37,38 +45,17 @@ function LoadingScreen() {
   );
 }
 
-function isSsoCallbackPath(): boolean {
-  return window.location.pathname.includes('/sso-callback');
-}
-
-function isSignInPath(): boolean {
-  return window.location.pathname.startsWith(SIGN_IN_PATH);
-}
-
-function isSignUpPath(): boolean {
-  return window.location.pathname.startsWith(SIGN_UP_PATH);
-}
-
-function isAuthPath(): boolean {
-  return isSignInPath() || isSignUpPath() || isSsoCallbackPath();
-}
-
-function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+function AuthScreenLayout({
+  children,
+  onContinueAsGuest,
+}: {
+  children: ReactNode;
+  onContinueAsGuest: () => void;
+}) {
   return (
     <div className="app app--auth">
       <main className="app-content auth-screen">
-        <div className="auth-clerk">
-          <SignIn
-            routing="path"
-            path={SIGN_IN_PATH}
-            oauthFlow="redirect"
-            appearance={signInAppearance}
-            signInUrl={SIGN_IN_PATH}
-            signUpUrl={SIGN_UP_PATH}
-            fallbackRedirectUrl={APP_HOME}
-            signUpFallbackRedirectUrl={APP_HOME}
-          />
-        </div>
+        <div className="auth-clerk">{children}</div>
         <div className="guest-auth">
           <button type="button" className="btn" onClick={onContinueAsGuest}>
             Continue as Guest
@@ -79,28 +66,36 @@ function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) 
   );
 }
 
+function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+  return (
+    <AuthScreenLayout onContinueAsGuest={onContinueAsGuest}>
+      <SignIn
+        routing="path"
+        path={SIGN_IN_PATH}
+        oauthFlow="redirect"
+        appearance={signInAppearance}
+        signInUrl={SIGN_IN_PATH}
+        signUpUrl={SIGN_UP_PATH}
+        fallbackRedirectUrl={APP_HOME}
+        signUpFallbackRedirectUrl={APP_HOME}
+      />
+    </AuthScreenLayout>
+  );
+}
+
 function SignUpScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
   return (
-    <div className="app app--auth">
-      <main className="app-content auth-screen">
-        <div className="auth-clerk">
-          <SignUp
-            routing="path"
-            path={SIGN_UP_PATH}
-            oauthFlow="redirect"
-            appearance={signInAppearance}
-            signInUrl={SIGN_IN_PATH}
-            fallbackRedirectUrl={APP_HOME}
-            signInFallbackRedirectUrl={APP_HOME}
-          />
-        </div>
-        <div className="guest-auth">
-          <button type="button" className="btn" onClick={onContinueAsGuest}>
-            Continue as Guest
-          </button>
-        </div>
-      </main>
-    </div>
+    <AuthScreenLayout onContinueAsGuest={onContinueAsGuest}>
+      <CustomSignUpScreen />
+    </AuthScreenLayout>
+  );
+}
+
+function SignUpVerifyPage({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+  return (
+    <AuthScreenLayout onContinueAsGuest={onContinueAsGuest}>
+      <SignUpVerifyScreen />
+    </AuthScreenLayout>
   );
 }
 
@@ -149,7 +144,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   const continueAsGuest = () => {
     configureGuestAuth();
     setGuestActive(true);
-    if (isSignInPath() || isSignUpPath()) {
+    if (isSignInPath() || isSignUpFormPath() || isSignUpVerifyPath()) {
       window.history.replaceState(null, '', APP_HOME);
     }
   };
@@ -178,9 +173,13 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Keep Clerk sign-in/up mounted on auth routes. Swapping to LoadingScreen while
-  // Clerk revalidates remounts <SignUp>/<SignIn> and can resend verification codes.
-  if (isSignUpPath()) {
+  // Keep auth screens mounted on auth routes. Swapping to LoadingScreen while Clerk
+  // revalidates can remount sign-up/sign-in UI and resend verification emails.
+  if (isSignUpVerifyPath()) {
+    return <SignUpVerifyPage onContinueAsGuest={continueAsGuest} />;
+  }
+
+  if (isSignUpFormPath()) {
     return <SignUpScreen onContinueAsGuest={continueAsGuest} />;
   }
 
