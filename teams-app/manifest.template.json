@@ -1,22 +1,22 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "id": "f8e3b2a1-4c5d-6e7f-8901-234567890abc",
   "packageName": "com.annaliese-sebastian.ingroups",
   "developer": {
     "name": "Annaliese Sebastian LLC",
     "websiteUrl": "https://YOUR-PAGES-URL",
-    "privacyUrl": "https://YOUR-PAGES-URL",
-    "termsOfUseUrl": "https://YOUR-PAGES-URL"
+    "privacyUrl": "https://YOUR-PAGES-URL/privacypolicy",
+    "termsOfUseUrl": "https://YOUR-PAGES-URL/termsofuse"
   },
   "name": {
     "short": "InGroups",
     "full": "InGroups Word Game"
   },
   "description": {
-    "short": "Align on a secret word with your group.",
-    "full": "InGroups is a multiplayer word alignment game for teams. One group tries to agree on a secret word while others listen and guess."
+    "short": "Align on a secret word with your group! A team-building / icebreaker exercise.",
+    "full": "Align on a secret word with your group - without giving it away!\n\nTired of the same old team-building exercises? Skip the forced trivia, awkward get-to-know-you prompts, and spaghetti towers. InGroups is a facilitated icebreaker designed for meetings, workshops, and gatherings of all kinds.\n\nEach round, one group becomes the In Group and discusses openly to agree on a word from a shared grid, while the Out Groups observe and try to predict that word. Leverage optional speed-based scoring and timers to keep the conversation flowing.\n\n- Built for mixed teams: Perfect for strangers, new hires, cross-functional teams, or any group where some people know each other, but not everyone. Even long-time friends - who knows? You might just learn something new about each other.\n\n- Fresh every time: The same word set plays out very differently depending on who's in the room. A single shift in group makeup completely changes the conversation and the outcome.\n\n- Rewarded sharing and listening: Sharing and listening are how you win. In Group members naturally draw on their own backgrounds and experiences to find hidden connections, while Out Group members must stay engaged to catch subtle clues.\n\n- Seamless rapport building: During a round, participants look for connections within a small subgroup. Between rounds, however, discussing successful and missed hints organically reveals personal insights and factoids to all - now everybody is part of the In Group!\n\n- Taking it further: A one-time purchase unlocks 50+ expanded word sets plus the ability to create custom word sets - great for incorporating company culture or for themed events."
   },
   "icons": {
     "color": "color.png",
