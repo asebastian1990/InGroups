@@ -1015,8 +1015,19 @@ body.teams-theme-dark .teams-context-banner {
   border-color: var(--gray-200);
 }
 
+.word-grid-disabled .word-cell.selected {
+  background: var(--dark);
+  color: var(--white);
+  border-color: var(--dark);
+  opacity: 0.92;
+}
+
 .word-grid-disabled .word-cell:hover {
   border-color: var(--gray-200);
+}
+
+.word-grid-disabled .word-cell.selected:hover {
+  border-color: var(--dark);
 }
 
 .win-condition-row {
@@ -1198,14 +1209,21 @@ body.teams-theme-dark .teams-context-banner {
 
 .modal:has(.how-to-play-carousel) {
   max-width: min(480px, calc(100vw - 40px));
+  max-height: min(85vh, 640px);
   width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.modal:has(.how-to-play-carousel) h2 {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
 .modal:has(.how-to-play-carousel) .modal-actions {
   flex-shrink: 0;
+  margin-top: 12px;
 }
 
 .modal h2 {
@@ -1239,16 +1257,23 @@ body.teams-theme-dark .teams-context-banner {
 }
 
 .how-to-play-viewport {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .how-to-play-scroll-shell {
   position: relative;
   width: 100%;
   min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .how-to-play-scroll-shell::before,
@@ -1285,13 +1310,15 @@ body.teams-theme-dark .teams-context-banner {
 .how-to-play-card {
   box-sizing: border-box;
   width: 100%;
-  max-height: min(58vh, 480px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   font-family: var(--font-serif);
   font-size: 0.95rem;
   line-height: 1.65;
-  padding: 0;
+  padding: 0 2px 4px;
 }
 
 .how-to-play-block {
@@ -1339,8 +1366,10 @@ body.teams-theme-dark .teams-context-banner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gray-200);
   flex-shrink: 0;
   width: 100%;
 }
@@ -1357,8 +1386,8 @@ body.teams-theme-dark .teams-context-banner {
 
 .how-to-play-nav {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   background: transparent;
@@ -1374,18 +1403,18 @@ body.teams-theme-dark .teams-context-banner {
   transform: translate(-50%, -50%);
   width: 0;
   height: 0;
-  border-top: 16px solid transparent;
-  border-bottom: 16px solid transparent;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
 }
 
 .how-to-play-nav--prev::before {
-  border-right: 22px solid var(--dark);
-  margin-left: -4px;
+  border-right: 13px solid var(--dark);
+  margin-left: -2px;
 }
 
 .how-to-play-nav--next::before {
-  border-left: 22px solid var(--dark);
-  margin-left: 4px;
+  border-left: 13px solid var(--dark);
+  margin-left: 2px;
 }
 
 .how-to-play-nav:hover::before {
