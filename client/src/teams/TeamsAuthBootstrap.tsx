@@ -56,7 +56,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   signInRef.current = signIn;
   const setActiveRef = useRef(setActive);
   setActiveRef.current = setActive;
+  const isSignedInRef = useRef(isSignedIn);
+  isSignedInRef.current = isSignedIn;
+
   const teamsCtxRef = useRef<TeamsProfile>(defaultTeamsProfile);
+  const autoSsoAttemptedRef = useRef(false);
+  const helpHintMarkedRef = useRef(false);
+  const clerkSessionConfiguredRef = useRef(false);
+
   const [ready, setReady] = useState(false);
   const [teamsCtxReady, setTeamsCtxReady] = useState(false);
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
@@ -100,6 +107,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
     (async () => {
       let nextProfile: TeamsProfile = { ...teamsCtxRef.current };
+      const signedIn = isSignedInRef.current;
 
       if (!clerkReady) {
         configureGuestAuth();
@@ -111,12 +119,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       }
 
       try {
-        if (isSignedIn) {
-          configureAuth(() => getTokenRef.current());
-          await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
-            console.warn('Failed to sync account with server:', err);
-          });
-          clearTeamsManualAuth();
+        if (signedIn) {
           nextProfile = {
             ...nextProfile,
             signedInWithTeams: true,
@@ -133,7 +136,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
             signedInWithTeams: false,
             signedInEmail: null,
           };
+        } else if (autoSsoAttemptedRef.current) {
+          nextProfile = {
+            ...nextProfile,
+            signedInWithTeams: false,
+            signedInEmail: null,
+          };
         } else {
+          autoSsoAttemptedRef.current = true;
           const ssoEnabled = await getTeamsSsoStatus();
           if (ssoEnabled && nextProfile.inTeams) {
             try {
@@ -156,12 +166,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
               }
 
               await activate!({ session: attempt.createdSessionId });
-              configureAuth(() => getTokenRef.current());
               await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
                 console.warn('Failed to sync account with server:', err);
               });
 
-              markLandingHelpHint();
+              if (!helpHintMarkedRef.current) {
+                helpHintMarkedRef.current = true;
+                markLandingHelpHint();
+              }
               nextProfile = {
                 ...nextProfile,
                 displayName: displayName ?? nextProfile.displayName,
@@ -204,11 +216,35 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, isSignedIn, guestChosen]);
+  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, guestChosen]);
+
+  useEffect(() => {
+    if (!ready || !isLoaded) return;
+
+    if (!isSignedIn) {
+      clerkSessionConfiguredRef.current = false;
+      return;
+    }
+
+    if (clerkSessionConfiguredRef.current) return;
+    clerkSessionConfiguredRef.current = true;
+
+    configureAuth(() => getTokenRef.current());
+    syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
+      console.warn('Failed to sync account with server:', err);
+    });
+    clearTeamsManualAuth();
+    setProfile((prev) => ({
+      ...prev,
+      signedInWithTeams: true,
+      signedInEmail: prev.signedInEmail,
+    }));
+  }, [ready, isLoaded, isSignedIn]);
 
   const retryTeamsSso = () => {
     clearTeamsManualAuth();
     setGuestChosen(false);
+    autoSsoAttemptedRef.current = false;
     window.location.replace(TEAMS_HOME);
   };
 

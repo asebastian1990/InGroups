@@ -78,6 +78,7 @@ export default function App() {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showHelpCoachmark, setShowHelpCoachmark] = useState(false);
   const landingHelpBtnRef = useRef<HTMLButtonElement>(null);
+  const helpCoachmarkOfferedRef = useRef(false);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
   const activeRoomCodeRef = useRef<string | null>(null);
@@ -129,7 +130,11 @@ export default function App() {
 
   useEffect(() => {
     if (!initialized || playerId || landingView !== 'home') return;
+    if (helpCoachmarkOfferedRef.current) return;
     if (!peekLandingHelpHint()) return;
+
+    helpCoachmarkOfferedRef.current = true;
+    consumeLandingHelpHint();
 
     const frame = window.requestAnimationFrame(() => {
       setShowHelpCoachmark(true);
@@ -138,7 +143,6 @@ export default function App() {
   }, [initialized, playerId, landingView]);
 
   const dismissHelpCoachmark = useCallback(() => {
-    consumeLandingHelpHint();
     setShowHelpCoachmark(false);
   }, []);
 
