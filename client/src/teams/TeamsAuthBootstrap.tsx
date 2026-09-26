@@ -307,6 +307,24 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     });
   }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured, markClerkUiEnabled]);
 
+  /** Clerk isSignedIn often blips false in the Teams webview; keep API auth if the session latch is still valid. */
+  useEffect(() => {
+    if (!ready || !isLoaded || isSignedIn) return;
+    const latched = readTeamsClerkLatch();
+    if (!latched && !teamsSsoSessionRef.current) return;
+
+    let cancelled = false;
+    void (async () => {
+      const token = await waitForClerkToken(() => getTokenRef.current(), 20, 150);
+      if (cancelled || !token) return;
+      configureAuth(() => getTokenRef.current());
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, isLoaded, isSignedIn]);
+
   useEffect(() => {
     if (!ready) return;
 
