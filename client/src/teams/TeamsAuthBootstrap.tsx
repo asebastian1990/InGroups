@@ -147,11 +147,31 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   }, [isLoaded]);
 
   useEffect(() => {
-    if (!clerkTimedOut || readyLatchRef.current || clerkUiEnabledRef.current) return;
+    if (!clerkTimedOut || readyLatchRef.current || !teamsCtxReady) return;
+
+    const latched = readTeamsClerkLatch();
+    const hasStoredSession =
+      clerkUiEnabledRef.current || teamsSsoSessionRef.current || latched !== null;
+
+    if (hasStoredSession) {
+      if (!teamsSsoSessionRef.current && latched) {
+        teamsSsoSessionRef.current = { signedInEmail: latched.email };
+      }
+      markClerkUiEnabled(latched?.email);
+      finishReady({
+        ...teamsCtxRef.current,
+        signedInWithTeams: true,
+        signedInEmail:
+          teamsSsoSessionRef.current?.signedInEmail ?? latched?.email ?? null,
+      });
+      setSsoPhase('done');
+      return;
+    }
+
     configureGuestAuth();
     finishReady({ ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null });
     setSsoPhase('done');
-  }, [clerkTimedOut, finishReady]);
+  }, [clerkTimedOut, teamsCtxReady, finishReady, markClerkUiEnabled]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,8 +191,38 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!teamsCtxReady || !isLoaded) return;
-    if (clerkUiEnabledRef.current || teamsSsoSessionRef.current) return;
     if (shouldSkipTeamsAutoSso()) return;
+
+    const latched = readTeamsClerkLatch();
+    const hasStoredSession =
+      clerkUiEnabledRef.current || teamsSsoSessionRef.current || latched !== null;
+
+    if (hasStoredSession) {
+      if (readyLatchRef.current) return;
+
+      let cancelled = false;
+      if (!teamsSsoSessionRef.current && latched) {
+        teamsSsoSessionRef.current = { signedInEmail: latched.email };
+      }
+      markClerkUiEnabled(latched?.email);
+
+      void (async () => {
+        await ensureClerkSessionConfigured(true);
+        if (cancelled) return;
+        finishReady({
+          ...teamsCtxRef.current,
+          signedInWithTeams: true,
+          signedInEmail:
+            teamsSsoSessionRef.current?.signedInEmail ?? latched?.email ?? null,
+        });
+        setSsoPhase('done');
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
     if (isSignedInRef.current) return;
     if (ssoPhase !== 'idle') return;
 
@@ -193,7 +243,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [teamsCtxReady, isLoaded, ssoPhase, finishReady]);
+  }, [
+    teamsCtxReady,
+    isLoaded,
+    ssoPhase,
+    finishReady,
+    markClerkUiEnabled,
+    ensureClerkSessionConfigured,
+  ]);
 
   useEffect(() => {
     if (!teamsCtxReady || !isLoaded) return;
