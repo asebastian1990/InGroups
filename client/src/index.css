@@ -407,7 +407,45 @@ body.teams-theme-dark .teams-context-banner {
 }
 
 .account-circle-btn--guest {
-  background: var(--gray-500);
+  background: var(--gray-600);
+  border-color: var(--gray-600);
+  color: var(--white);
+}
+
+.account-menu-anchor {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-menu-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 148px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(38, 38, 38, 0.12);
+  z-index: 150;
+  padding: 4px 0;
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  color: var(--dark);
+}
+
+.account-menu-item:hover {
+  background: var(--gray-100);
 }
 
 .help-coachmark-layer {
