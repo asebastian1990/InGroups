@@ -20,6 +20,7 @@ import {
   shouldSkipTeamsAutoSso,
   TEAMS_HOME,
 } from './teamsManualAuth';
+import { waitForClerkToken } from './waitForClerkToken';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
 
@@ -58,16 +59,15 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const readyLatchRef = useRef(false);
   const clerkUiEnabledRef = useRef(false);
 
-  const ensureClerkSessionConfigured = useCallback(async () => {
+  const ensureClerkSessionConfigured = useCallback(async (waitForSession = false) => {
     if (clerkSessionConfiguredRef.current) return true;
-    try {
-      const token = await getTokenRef.current();
-      if (!token) return false;
-    } catch {
-      return false;
-    }
+    const token = waitForSession
+      ? await waitForClerkToken(() => getTokenRef.current())
+      : await waitForClerkToken(() => getTokenRef.current(), 3, 50);
+    if (!token) return false;
     clerkSessionConfiguredRef.current = true;
     clerkUiEnabledRef.current = true;
+    setClerkUiEnabled(true);
     configureAuth(() => getTokenRef.current());
     await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
       console.warn('Failed to sync account with server:', err);
@@ -190,9 +190,8 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
     (async () => {
       teamsSsoSessionRef.current = { signedInEmail: null };
-      if (await ensureClerkSessionConfigured()) {
-        markClerkUiEnabled();
-      }
+      markClerkUiEnabled();
+      await ensureClerkSessionConfigured(true);
       if (!cancelled) {
         finishReady({
           ...teamsCtxRef.current,
@@ -243,9 +242,8 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
       if (result.ok) {
         teamsSsoSessionRef.current = { signedInEmail: result.email };
-        if (await ensureClerkSessionConfigured()) {
-          markClerkUiEnabled();
-        }
+        markClerkUiEnabled();
+        await ensureClerkSessionConfigured(true);
         if (!helpHintMarkedRef.current) {
           helpHintMarkedRef.current = true;
           markLandingHelpHint();

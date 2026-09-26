@@ -1,15 +1,18 @@
 import { UserButton, useAuth } from '@clerk/clerk-react';
 import { exitGuestMode, isGuestMode } from '../api';
-import { useTeamsClerkUi, useTeamsEmbed } from '../teams/TeamsEmbedContext';
+import { useTeamsClerkUi, useTeamsEmbed, useTeamsProfile } from '../teams/TeamsEmbedContext';
 import { teamsHomeWithSignedOut } from '../teams/teamsManualAuth';
 
 export function HeaderAuth() {
   const teamsEmbed = useTeamsEmbed();
   const teamsClerkUi = useTeamsClerkUi();
-  const { isSignedIn } = useAuth();
+  const teamsProfile = useTeamsProfile();
+  const { isSignedIn, userId } = useAuth();
   const afterSignOutUrl = teamsEmbed ? teamsHomeWithSignedOut() : '/sign-in';
+  const teamsHasClerkSession =
+    teamsEmbed && (teamsClerkUi || teamsProfile.signedInWithTeams);
   const showClerkAccount =
-    !isGuestMode() && (isSignedIn || (teamsEmbed && teamsClerkUi));
+    !isGuestMode() && (Boolean(isSignedIn || userId) || teamsHasClerkSession);
 
   if (isGuestMode()) {
     return (

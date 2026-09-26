@@ -36,6 +36,7 @@ export function RunTeamsSsoOnce({ onComplete }: { onComplete: (result: TeamsSsoR
           throw new Error('Clerk sign-in did not complete.');
         }
         await setActive({ session: attempt.createdSessionId });
+        await new Promise((resolve) => setTimeout(resolve, 150));
         if (!cancelled) {
           onCompleteRef.current({ ok: true, email, displayName });
         }
