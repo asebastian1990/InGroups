@@ -5,11 +5,9 @@ import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { clearOAuthHelpHintPending, markLandingHelpHint, markOAuthHelpHintPending } from './landingHelpHint';
-import { clearTeamsManualAuth } from '../teams/teamsManualAuth';
+import { clearTeamsManualAuth, TEAMS_HOME } from '../teams/teamsManualAuth';
 import { APP_HOME, SIGN_UP_PATH, signInOAuthRedirectUrl } from './paths';
 import { resendSignInEmailCode, sendSignInEmailCodeOnce } from './signInEmailCode';
-
-const TEAMS_APP_HOME = '/teams';
 
 type Step = 'form' | 'verify-code';
 
@@ -44,7 +42,7 @@ export function CustomSignInScreen({ teamsEmbed = false }: { teamsEmbed?: boolea
     markLandingHelpHint();
     if (teamsEmbed) {
       clearTeamsManualAuth();
-      window.location.replace(TEAMS_APP_HOME);
+      window.location.replace(TEAMS_HOME);
     } else {
       window.location.replace(APP_HOME);
     }
@@ -103,7 +101,7 @@ export function CustomSignInScreen({ teamsEmbed = false }: { teamsEmbed?: boolea
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: signInOAuthRedirectUrl(),
-        redirectUrlComplete: `${window.location.origin}${teamsEmbed ? TEAMS_APP_HOME : APP_HOME}`,
+        redirectUrlComplete: `${window.location.origin}${teamsEmbed ? TEAMS_HOME : APP_HOME}`,
       });
     } catch (err) {
       setError(formatClerkError(err));

@@ -1,11 +1,15 @@
 import { configureGuestAuth } from '../api';
 import { CustomSignInScreen } from '../auth/CustomSignInScreen';
 import { markLandingHelpHint } from '../auth/landingHelpHint';
-import { markTeamsManualAuth } from './teamsManualAuth';
 
-export function TeamsManualSignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+export function TeamsManualSignInScreen({
+  onContinueAsGuest,
+  onRetryTeamsSso,
+}: {
+  onContinueAsGuest: () => void;
+  onRetryTeamsSso: () => void;
+}) {
   const continueAsGuest = () => {
-    markTeamsManualAuth();
     configureGuestAuth();
     markLandingHelpHint();
     onContinueAsGuest();
@@ -14,6 +18,12 @@ export function TeamsManualSignInScreen({ onContinueAsGuest }: { onContinueAsGue
   return (
     <div className="app app--teams app--auth">
       <main className="app-content auth-screen">
+        <button type="button" className="btn btn-primary auth-form-submit" onClick={onRetryTeamsSso}>
+          Sign in with Microsoft Teams
+        </button>
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
         <div className="auth-clerk">
           <CustomSignInScreen teamsEmbed />
         </div>

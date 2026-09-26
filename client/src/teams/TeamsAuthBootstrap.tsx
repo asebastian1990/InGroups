@@ -6,6 +6,7 @@ import {
   configureGuestAuth,
   exchangeTeamsSsoToken,
   getTeamsSsoStatus,
+  resetAuth,
   syncAuthenticatedUser,
 } from '../api';
 import { markLandingHelpHint } from '../auth/landingHelpHint';
@@ -16,13 +17,22 @@ import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
 import {
   clearTeamsManualAuth,
-  markTeamsManualAuth,
+  consumeTeamsSignedOutFromUrl,
   shouldSkipTeamsAutoSso,
+  TEAMS_HOME,
 } from './teamsManualAuth';
 import { withTimeout } from './withTimeout';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
 const TEAMS_SSO_TOKEN_TIMEOUT_MS = 15_000;
+
+let signedOutQueryConsumed = false;
+
+function ensureSignedOutQueryConsumed() {
+  if (signedOutQueryConsumed) return;
+  signedOutQueryConsumed = true;
+  consumeTeamsSignedOutFromUrl();
+}
 
 function LoadingScreen({ detail }: { detail?: string }) {
   return (
@@ -36,6 +46,8 @@ function LoadingScreen({ detail }: { detail?: string }) {
 }
 
 export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
+  ensureSignedOutQueryConsumed();
+
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const getTokenRef = useRef(getToken);
@@ -44,22 +56,12 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   signInRef.current = signIn;
   const setActiveRef = useRef(setActive);
   setActiveRef.current = setActive;
-  const wasSignedInRef = useRef(isSignedIn);
-
   const teamsCtxRef = useRef<TeamsProfile>(defaultTeamsProfile);
   const [ready, setReady] = useState(false);
   const [teamsCtxReady, setTeamsCtxReady] = useState(false);
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
   const [clerkTimedOut, setClerkTimedOut] = useState(false);
   const [guestChosen, setGuestChosen] = useState(false);
-
-  useEffect(() => {
-    if (wasSignedInRef.current && !isSignedIn) {
-      markTeamsManualAuth();
-      setGuestChosen(false);
-    }
-    wasSignedInRef.current = isSignedIn;
-  }, [isSignedIn]);
 
   useEffect(() => {
     if (isLoaded && signInLoaded) return;
@@ -121,7 +123,11 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
             signedInEmail: null,
           };
         } else if (shouldSkipTeamsAutoSso()) {
-          configureGuestAuth();
+          if (guestChosen) {
+            configureGuestAuth();
+          } else {
+            resetAuth();
+          }
           nextProfile = {
             ...nextProfile,
             signedInWithTeams: false,
@@ -198,7 +204,13 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, isSignedIn]);
+  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, isSignedIn, guestChosen]);
+
+  const retryTeamsSso = () => {
+    clearTeamsManualAuth();
+    setGuestChosen(false);
+    window.location.replace(TEAMS_HOME);
+  };
 
   if (!ready) {
     return (
@@ -216,7 +228,10 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
   if (showManualSignIn) {
     return (
-      <TeamsManualSignInScreen onContinueAsGuest={() => setGuestChosen(true)} />
+      <TeamsManualSignInScreen
+        onContinueAsGuest={() => setGuestChosen(true)}
+        onRetryTeamsSso={retryTeamsSso}
+      />
     );
   }
 

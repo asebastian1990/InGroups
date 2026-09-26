@@ -6,7 +6,6 @@ import { useTeamsProfile } from '../teams/TeamsEmbedContext';
 import type { ClientRoomState } from '@shared/types';
 
 interface Props {
-  teamsEmbed?: boolean;
   onEnter: (playerId: string, roomCode: string, room?: ClientRoomState, requestedName?: string) => void;
   onNavigate: (screen: string) => void;
 }
@@ -23,10 +22,10 @@ function defaultNameFromClerkUser(user: NonNullable<ReturnType<typeof useUser>['
   return '';
 }
 
-export function LandingScreen({ teamsEmbed = false, onEnter, onNavigate }: Props) {
+export function LandingScreen({ onEnter, onNavigate }: Props) {
   const { user, isLoaded: userLoaded } = useUser();
   const teamsProfile = useTeamsProfile();
-  const guest = (teamsEmbed && !teamsProfile.signedInWithTeams) || isGuestMode();
+  const guest = isGuestMode();
   const defaultGuestName = teamsProfile.displayName?.trim() || 'Guest';
   const [name, setName] = useState(() => (guest ? defaultGuestName : ''));
 
@@ -118,18 +117,14 @@ export function LandingScreen({ teamsEmbed = false, onEnter, onNavigate }: Props
           <span>View Word Sets</span>
           <span className="menu-item-arrow">›</span>
         </div>
-        {!(teamsEmbed && !teamsProfile.signedInWithTeams) && (
-          <>
-            <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
-              <span>Create Word Set</span>
-              <span className="menu-item-arrow">›</span>
-            </div>
-            <div className="menu-item" onClick={() => onNavigate('license')}>
-              <span>License</span>
-              <span className="menu-item-arrow">{guest ? '›' : 'Get or activate ›'}</span>
-            </div>
-          </>
-        )}
+        <div className="menu-item" onClick={() => onNavigate('createWordSet')}>
+          <span>Create Word Set</span>
+          <span className="menu-item-arrow">›</span>
+        </div>
+        <div className="menu-item" onClick={() => onNavigate('license')}>
+          <span>License</span>
+          <span className="menu-item-arrow">{guest ? '›' : 'Get or activate ›'}</span>
+        </div>
       </div>
 
       <nav className="landing-legal-links" aria-label="Legal">

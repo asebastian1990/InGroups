@@ -63,7 +63,6 @@ function screenForRoom(room: ClientRoomState): Screen {
 export default function App() {
   const teamsEmbed = useTeamsEmbed();
   const teamsProfile = useTeamsProfile();
-  const teamsGuestOnly = teamsEmbed && !teamsProfile.signedInWithTeams;
   const initialLicenseReturn = readLicenseReturnParams();
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [room, setRoom] = useState<ClientRoomState | null>(null);
@@ -123,12 +122,6 @@ export default function App() {
     if (!sessionActiveRef.current) return;
     setRoom((prev) => (prev ? { ...prev, chatMessages: messages } : prev));
   }, []);
-
-  useEffect(() => {
-    if (teamsGuestOnly && landingView !== 'home' && landingView !== 'viewWordSets') {
-      setLandingView('home');
-    }
-  }, [teamsGuestOnly, landingView]);
 
   useEffect(() => {
     confirmOAuthHelpHintIfPending();
@@ -283,7 +276,7 @@ export default function App() {
               buttonRef={landingHelpBtnRef}
               onClick={() => setShowHowToPlay(true)}
             />
-            {!teamsGuestOnly && <HeaderAuth />}
+            <HeaderAuth />
           </div>
         </header>
         {teamsEmbed && (
@@ -296,7 +289,7 @@ export default function App() {
           </p>
         )}
         <main className="app-content">
-          {landingView === 'license' && !teamsGuestOnly && (
+          {landingView === 'license' && (
             <LicenseScreen
               onBack={() => setLandingView('home')}
               purchaseStatus={licenseReturn.purchaseStatus}
@@ -304,7 +297,7 @@ export default function App() {
               onPurchaseHandled={clearLicenseReturnParams}
             />
           )}
-          {landingView === 'createWordSet' && !teamsGuestOnly && (
+          {landingView === 'createWordSet' && (
             <CreateWordSetScreen
               onBack={() => setLandingView('home')}
               onGetLicense={() => setLandingView('license')}
@@ -315,7 +308,6 @@ export default function App() {
           )}
           {landingView === 'home' && (
             <LandingScreen
-              teamsEmbed={teamsEmbed}
               onEnter={handleEnter}
               onNavigate={(s) => setLandingView(s as LandingView)}
             />
@@ -348,7 +340,7 @@ export default function App() {
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
             {guest || teamsEmbed ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
           </button>
-          {!guest && !teamsGuestOnly && <HeaderAuth />}
+          <HeaderAuth />
         </div>
       </header>
 
