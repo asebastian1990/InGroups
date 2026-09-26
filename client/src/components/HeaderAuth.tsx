@@ -1,11 +1,16 @@
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, useAuth } from '@clerk/clerk-react';
 import { exitGuestMode, isGuestMode } from '../api';
-import { useTeamsEmbed } from '../teams/TeamsEmbedContext';
+import { useTeamsClerkUi, useTeamsEmbed } from '../teams/TeamsEmbedContext';
 import { teamsHomeWithSignedOut } from '../teams/teamsManualAuth';
 
 export function HeaderAuth() {
   const teamsEmbed = useTeamsEmbed();
+  const teamsClerkUi = useTeamsClerkUi();
+  const { isSignedIn } = useAuth();
   const afterSignOutUrl = teamsEmbed ? teamsHomeWithSignedOut() : '/sign-in';
+  const showClerkAccount =
+    !isGuestMode() && (isSignedIn || (teamsEmbed && teamsClerkUi));
+
   if (isGuestMode()) {
     return (
       <button
@@ -19,6 +24,10 @@ export function HeaderAuth() {
         Exit
       </button>
     );
+  }
+
+  if (!showClerkAccount) {
+    return null;
   }
 
   return <UserButton afterSignOutUrl={afterSignOutUrl} />;

@@ -105,7 +105,13 @@ export function exitGuestMode(): void {
 export function configureAuth(getToken: () => Promise<string | null>) {
 
   clearGuestMode();
+
+  const hadAuth = getTokenFn !== null;
   getTokenFn = getToken;
+
+  if (hadAuth && socket?.connected) {
+    return;
+  }
 
   if (socket) {
 

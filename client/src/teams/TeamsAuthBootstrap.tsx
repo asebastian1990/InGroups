@@ -1,16 +1,15 @@
-import { useAuth, useSignIn } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { authentication } from '@microsoft/teams-js';
 import {
   configureAuth,
   configureGuestAuth,
-  exchangeTeamsSsoToken,
   getTeamsSsoStatus,
   resetAuth,
   syncAuthenticatedUser,
 } from '../api';
 import { markLandingHelpHint } from '../auth/landingHelpHint';
 import { initTeamsClient } from './initTeams';
+import { RunTeamsSsoOnce, type TeamsSsoResult } from './RunTeamsSsoOnce';
 import { TeamsEmbedProvider } from './TeamsEmbedContext';
 import { TeamsManualSignInScreen } from './TeamsManualSignInScreen';
 import type { TeamsProfile } from './types';
@@ -21,10 +20,8 @@ import {
   shouldSkipTeamsAutoSso,
   TEAMS_HOME,
 } from './teamsManualAuth';
-import { withTimeout } from './withTimeout';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
-const TEAMS_SSO_TOKEN_TIMEOUT_MS = 15_000;
 
 let signedOutQueryConsumed = false;
 
@@ -49,21 +46,17 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   ensureSignedOutQueryConsumed();
 
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
-  const signInRef = useRef(signIn);
-  signInRef.current = signIn;
-  const setActiveRef = useRef(setActive);
-  setActiveRef.current = setActive;
   const isSignedInRef = useRef(isSignedIn);
   isSignedInRef.current = isSignedIn;
 
   const teamsCtxRef = useRef<TeamsProfile>(defaultTeamsProfile);
-  const autoSsoAttemptedRef = useRef(false);
   const helpHintMarkedRef = useRef(false);
   const clerkSessionConfiguredRef = useRef(false);
   const teamsSsoSessionRef = useRef<{ signedInEmail: string | null } | null>(null);
+  const readyLatchRef = useRef(false);
+  const clerkUiEnabledRef = useRef(false);
 
   const ensureClerkSessionConfigured = useCallback(async () => {
     if (clerkSessionConfiguredRef.current) return true;
@@ -74,6 +67,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       return false;
     }
     clerkSessionConfiguredRef.current = true;
+    clerkUiEnabledRef.current = true;
     configureAuth(() => getTokenRef.current());
     await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
       console.warn('Failed to sync account with server:', err);
@@ -87,9 +81,48 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
   const [clerkTimedOut, setClerkTimedOut] = useState(false);
   const [guestChosen, setGuestChosen] = useState(false);
+  const [clerkUiEnabled, setClerkUiEnabled] = useState(false);
+  const [ssoPhase, setSsoPhase] = useState<'idle' | 'running' | 'done'>('idle');
+
+  const markClerkUiEnabled = useCallback(() => {
+    clerkUiEnabledRef.current = true;
+    setClerkUiEnabled(true);
+  }, []);
+
+  const markClerkUiDisabled = useCallback(() => {
+    clerkUiEnabledRef.current = false;
+    setClerkUiEnabled(false);
+    teamsSsoSessionRef.current = null;
+    clerkSessionConfiguredRef.current = false;
+  }, []);
+
+  const finishReady = useCallback((nextProfile: TeamsProfile) => {
+    setProfile((prev) => {
+      if (clerkUiEnabledRef.current) {
+        return {
+          ...nextProfile,
+          signedInWithTeams: true,
+          signedInEmail:
+            nextProfile.signedInEmail ??
+            prev.signedInEmail ??
+            teamsSsoSessionRef.current?.signedInEmail ??
+            null,
+        };
+      }
+      return nextProfile;
+    });
+    readyLatchRef.current = true;
+    setReady(true);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded && signInLoaded) return;
+    if (shouldSkipTeamsAutoSso()) {
+      markClerkUiDisabled();
+    }
+  }, [markClerkUiDisabled]);
+
+  useEffect(() => {
+    if (isLoaded) return;
 
     const timer = window.setTimeout(() => {
       console.warn('[teams-auth] Clerk did not load in time; continuing in guest mode.');
@@ -97,7 +130,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     }, CLERK_LOAD_TIMEOUT_MS);
 
     return () => window.clearTimeout(timer);
-  }, [isLoaded, signInLoaded]);
+  }, [isLoaded]);
+
+  useEffect(() => {
+    if (!clerkTimedOut || readyLatchRef.current || clerkUiEnabledRef.current) return;
+    configureGuestAuth();
+    finishReady({ ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null });
+    setSsoPhase('done');
+  }, [clerkTimedOut, finishReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,137 +156,71 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!teamsCtxReady) return;
-
-    const clerkReady = isLoaded && signInLoaded;
-    if (!clerkReady && !clerkTimedOut) return;
+    if (!teamsCtxReady || !isLoaded) return;
+    if (clerkUiEnabledRef.current || teamsSsoSessionRef.current) return;
+    if (shouldSkipTeamsAutoSso()) return;
+    if (isSignedInRef.current) return;
+    if (ssoPhase !== 'idle') return;
 
     let cancelled = false;
 
     (async () => {
-      let nextProfile: TeamsProfile = { ...teamsCtxRef.current };
-      const signedIn = isSignedInRef.current;
-
-      if (!clerkReady) {
+      const ssoEnabled = await getTeamsSsoStatus();
+      if (cancelled) return;
+      if (!ssoEnabled || !teamsCtxRef.current.inTeams) {
         configureGuestAuth();
-        if (!cancelled) {
-          setProfile((prev) => ({ ...prev, signedInWithTeams: false, signedInEmail: null }));
-          setReady(true);
-        }
+        finishReady({ ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null });
+        setSsoPhase('done');
         return;
       }
+      setSsoPhase('running');
+    })();
 
-      try {
-        if (signedIn) {
-          teamsSsoSessionRef.current = { signedInEmail: null };
-          await ensureClerkSessionConfigured();
-          nextProfile = {
-            ...nextProfile,
-            signedInWithTeams: true,
-            signedInEmail: null,
-          };
-        } else if (shouldSkipTeamsAutoSso()) {
-          teamsSsoSessionRef.current = null;
-          clerkSessionConfiguredRef.current = false;
-          if (guestChosen) {
-            configureGuestAuth();
-          } else {
-            resetAuth();
-          }
-          nextProfile = {
-            ...nextProfile,
-            signedInWithTeams: false,
-            signedInEmail: null,
-          };
-        } else if (autoSsoAttemptedRef.current) {
-          if (teamsSsoSessionRef.current) {
-            await ensureClerkSessionConfigured();
-            nextProfile = {
-              ...nextProfile,
-              signedInWithTeams: true,
-              signedInEmail: teamsSsoSessionRef.current.signedInEmail,
-            };
-          } else {
-            nextProfile = {
-              ...nextProfile,
-              signedInWithTeams: false,
-              signedInEmail: null,
-            };
-          }
-        } else {
-          autoSsoAttemptedRef.current = true;
-          const ssoEnabled = await getTeamsSsoStatus();
-          if (ssoEnabled && nextProfile.inTeams) {
-            try {
-              const teamsToken = await withTimeout(
-                authentication.getAuthToken(),
-                TEAMS_SSO_TOKEN_TIMEOUT_MS,
-                'Teams SSO token',
-              );
-              const { signInToken, email, displayName } = await exchangeTeamsSsoToken(teamsToken);
+    return () => {
+      cancelled = true;
+    };
+  }, [teamsCtxReady, isLoaded, ssoPhase, finishReady]);
 
-              const signInClient = signInRef.current;
-              const activate = setActiveRef.current;
-              if (!signInClient) {
-                throw new Error('Clerk sign-in is unavailable.');
-              }
+  useEffect(() => {
+    if (!teamsCtxReady || !isLoaded) return;
+    if (!isSignedInRef.current) return;
+    if (clerkUiEnabledRef.current) return;
 
-              const attempt = await signInClient.create({ strategy: 'ticket', ticket: signInToken });
-              if (attempt.status !== 'complete' || !attempt.createdSessionId) {
-                throw new Error('Clerk sign-in did not complete.');
-              }
+    let cancelled = false;
 
-              await activate!({ session: attempt.createdSessionId });
-              teamsSsoSessionRef.current = { signedInEmail: email };
-              await ensureClerkSessionConfigured();
-
-              if (!helpHintMarkedRef.current) {
-                helpHintMarkedRef.current = true;
-                markLandingHelpHint();
-              }
-              nextProfile = {
-                ...nextProfile,
-                displayName: displayName ?? nextProfile.displayName,
-                signedInWithTeams: true,
-                signedInEmail: email,
-              };
-            } catch (err) {
-              console.warn('Teams SSO unavailable, using guest mode:', err);
-              configureGuestAuth();
-              nextProfile = {
-                ...nextProfile,
-                signedInWithTeams: false,
-                signedInEmail: null,
-              };
-            }
-          } else {
-            configureGuestAuth();
-            nextProfile = {
-              ...nextProfile,
-              signedInWithTeams: false,
-              signedInEmail: null,
-            };
-          }
-        }
-
-        if (!cancelled) {
-          setProfile(nextProfile);
-          setReady(true);
-        }
-      } catch (err) {
-        console.error('Teams bootstrap error:', err);
-        configureGuestAuth();
-        if (!cancelled) {
-          setProfile((prev) => ({ ...prev, signedInWithTeams: false, signedInEmail: null }));
-          setReady(true);
-        }
+    (async () => {
+      teamsSsoSessionRef.current = { signedInEmail: null };
+      if (await ensureClerkSessionConfigured()) {
+        markClerkUiEnabled();
+      }
+      if (!cancelled) {
+        finishReady({
+          ...teamsCtxRef.current,
+          signedInWithTeams: true,
+          signedInEmail: null,
+        });
+        setSsoPhase('done');
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, guestChosen, ensureClerkSessionConfigured]);
+  }, [teamsCtxReady, isLoaded, isSignedIn, ensureClerkSessionConfigured, markClerkUiEnabled, finishReady]);
+
+  useEffect(() => {
+    if (!teamsCtxReady || !isLoaded) return;
+    if (!shouldSkipTeamsAutoSso()) return;
+
+    let nextProfile: TeamsProfile = { ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null };
+    if (guestChosen) {
+      configureGuestAuth();
+    } else {
+      resetAuth();
+    }
+    finishReady(nextProfile);
+    setSsoPhase('done');
+  }, [teamsCtxReady, isLoaded, guestChosen, finishReady]);
 
   useEffect(() => {
     if (!ready || !isLoaded) return;
@@ -254,36 +228,70 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
     void ensureClerkSessionConfigured().then((ok) => {
       if (!ok) return;
+      markClerkUiEnabled();
       setProfile((prev) => ({
         ...prev,
         signedInWithTeams: true,
         signedInEmail: prev.signedInEmail ?? teamsSsoSessionRef.current?.signedInEmail ?? null,
       }));
     });
-  }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured]);
+  }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured, markClerkUiEnabled]);
+
+  const handleSsoComplete = useCallback(
+    async (result: TeamsSsoResult) => {
+      setSsoPhase('done');
+
+      if (result.ok) {
+        teamsSsoSessionRef.current = { signedInEmail: result.email };
+        if (await ensureClerkSessionConfigured()) {
+          markClerkUiEnabled();
+        }
+        if (!helpHintMarkedRef.current) {
+          helpHintMarkedRef.current = true;
+          markLandingHelpHint();
+        }
+        finishReady({
+          ...teamsCtxRef.current,
+          displayName: result.displayName ?? teamsCtxRef.current.displayName,
+          signedInWithTeams: true,
+          signedInEmail: result.email,
+        });
+        return;
+      }
+
+      configureGuestAuth();
+      finishReady({ ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null });
+    },
+    [ensureClerkSessionConfigured, markClerkUiEnabled, finishReady],
+  );
 
   const retryTeamsSso = () => {
     clearTeamsManualAuth();
     setGuestChosen(false);
-    autoSsoAttemptedRef.current = false;
-    teamsSsoSessionRef.current = null;
-    clerkSessionConfiguredRef.current = false;
+    markClerkUiDisabled();
+    setSsoPhase('idle');
+    setReady(false);
+    readyLatchRef.current = false;
     window.location.replace(TEAMS_HOME);
   };
 
-  if (!ready) {
+  if (!ready && !readyLatchRef.current) {
     return (
-      <LoadingScreen
-        detail={
-          clerkTimedOut
-            ? 'Authentication is taking longer than expected…'
-            : undefined
-        }
-      />
+      <>
+        {ssoPhase === 'running' && <RunTeamsSsoOnce onComplete={handleSsoComplete} />}
+        <LoadingScreen
+          detail={
+            clerkTimedOut
+              ? 'Authentication is taking longer than expected…'
+              : undefined
+          }
+        />
+      </>
     );
   }
 
-  const showManualSignIn = !isSignedIn && shouldSkipTeamsAutoSso() && !guestChosen;
+  const showManualSignIn =
+    shouldSkipTeamsAutoSso() && !guestChosen && !clerkUiEnabled;
 
   if (showManualSignIn) {
     return (
@@ -294,5 +302,9 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     );
   }
 
-  return <TeamsEmbedProvider profile={profile}>{children}</TeamsEmbedProvider>;
+  return (
+    <TeamsEmbedProvider profile={profile} clerkUiEnabled={clerkUiEnabled}>
+      {children}
+    </TeamsEmbedProvider>
+  );
 }
