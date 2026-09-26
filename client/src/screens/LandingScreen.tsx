@@ -103,7 +103,11 @@ export function LandingScreen({ teamsEmbed = false, onEnter, onNavigate }: Props
           placeholder="ABCD"
           maxLength={4}
         />
-        <button className="btn" onClick={handleJoin} disabled={creating || joining || !name.trim() || !roomCode.trim()}>
+        <button
+          className="btn btn-primary landing-join-btn"
+          onClick={handleJoin}
+          disabled={creating || joining || !name.trim() || !roomCode.trim()}
+        >
           {joining ? 'Joining…' : 'Join Game'}
         </button>
         {error && <p className="error-msg">{error}</p>}

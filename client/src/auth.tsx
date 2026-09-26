@@ -1,8 +1,4 @@
-import {
-  AuthenticateWithRedirectCallback,
-  ClerkProvider,
-  useAuth,
-} from '@clerk/clerk-react';
+import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   configureAuth,
@@ -24,6 +20,8 @@ import {
   isSignUpVerifyPath,
   isSsoCallbackPath,
 } from './auth/paths';
+import { SsoRedirectCallback } from './auth/SsoRedirectCallback';
+import { useWindowPathname } from './auth/useWindowPathname';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -87,6 +85,7 @@ function SignUpVerifyPage({ onContinueAsGuest }: { onContinueAsGuest: () => void
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
+  const pathname = useWindowPathname();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
@@ -124,14 +123,14 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (guestActive || !isLoaded || isSignedIn) return;
-    if (isAuthPath()) return;
+    if (isAuthPath(pathname)) return;
     window.location.replace(SIGN_IN_PATH);
-  }, [guestActive, isLoaded, isSignedIn]);
+  }, [guestActive, isLoaded, isSignedIn, pathname]);
 
   const continueAsGuest = () => {
     configureGuestAuth();
     setGuestActive(true);
-    if (isSignInPath() || isSignUpFormPath() || isSignUpVerifyPath()) {
+    if (isSignInPath(pathname) || isSignUpFormPath(pathname) || isSignUpVerifyPath(pathname)) {
       window.history.replaceState(null, '', APP_HOME);
     }
   };
@@ -145,16 +144,12 @@ function AuthGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  if (isSsoCallbackPath()) {
+  if (isSsoCallbackPath(pathname)) {
     return (
       <div className="app app--auth">
         <main className="app-content auth-screen">
-          <AuthenticateWithRedirectCallback
-            signInUrl={SIGN_IN_PATH}
-            signUpUrl={SIGN_UP_PATH}
-            signInFallbackRedirectUrl={APP_HOME}
-            signUpFallbackRedirectUrl={APP_HOME}
-          />
+          <p className="muted">Completing sign-in…</p>
+          <SsoRedirectCallback />
         </main>
       </div>
     );
@@ -162,15 +157,15 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   // Keep auth screens mounted on auth routes. Swapping to LoadingScreen while Clerk
   // revalidates can remount sign-up/sign-in UI and resend verification emails.
-  if (isSignUpVerifyPath()) {
+  if (isSignUpVerifyPath(pathname)) {
     return <SignUpVerifyPage onContinueAsGuest={continueAsGuest} />;
   }
 
-  if (isSignUpFormPath()) {
+  if (isSignUpFormPath(pathname)) {
     return <SignUpScreen onContinueAsGuest={continueAsGuest} />;
   }
 
-  if (isSignInPath()) {
+  if (isSignInPath(pathname)) {
     return <SignInScreen onContinueAsGuest={continueAsGuest} />;
   }
 

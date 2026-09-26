@@ -1,5 +1,6 @@
 import { useSignUp } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
 import { APP_HOME, SIGN_IN_PATH } from './paths';
 import {
@@ -195,7 +196,7 @@ export function CustomSignUpScreen() {
 
   return (
     <div className="auth-form">
-      <h1 className="auth-form-title">Create account</h1>
+      <AuthFormHeader title="Create account" />
 
       <form className="auth-form-fields" onSubmit={handleSubmit}>
         <label className="input-label" htmlFor="sign-up-email">

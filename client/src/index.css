@@ -140,10 +140,24 @@ body.teams-theme-dark .teams-context-banner {
   gap: 12px;
 }
 
+.auth-form-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.auth-form-logo {
+  margin: 0 auto;
+}
+
 .auth-form-title {
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1.2;
+  margin: 0;
 }
 
 .auth-form-lead {
@@ -214,6 +228,11 @@ body.teams-theme-dark .teams-context-banner {
 .auth-oauth-btn {
   font-family: var(--font-sans);
   font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.auth-oauth-google-icon {
+  flex-shrink: 0;
 }
 
 .auth-reset-link {
@@ -1118,6 +1137,13 @@ body.teams-theme-dark .teams-context-banner {
   color: var(--gray-600);
   margin-bottom: 32px;
   font-size: 1.05rem;
+}
+
+.landing-join-btn:disabled {
+  opacity: 1;
+  background: #7a7a7a;
+  border-color: #7a7a7a;
+  color: var(--white);
 }
 
 .landing-form {

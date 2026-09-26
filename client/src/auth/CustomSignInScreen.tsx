@@ -1,6 +1,9 @@
 import { useSignIn } from '@clerk/clerk-react';
-import { useRef, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { useAuthFormIdleReset } from './useAuthFormIdleReset';
+import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
+import { GoogleSignInButton } from './GoogleSignInButton';
 import { APP_HOME, SIGN_UP_PATH, signInOAuthRedirectUrl } from './paths';
 import { resendSignInEmailCode, sendSignInEmailCodeOnce } from './signInEmailCode';
 
@@ -16,6 +19,14 @@ export function CustomSignInScreen() {
   const [busy, setBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [resent, setResent] = useState(false);
+
+  const resetInteractionState = useCallback(() => {
+    submittingRef.current = false;
+    setBusy(false);
+    setResendBusy(false);
+  }, []);
+
+  useAuthFormIdleReset(resetInteractionState);
 
   async function completeSignIn() {
     if (!signIn || !setActive || signIn.status !== 'complete' || !signIn.createdSessionId) {
@@ -71,7 +82,6 @@ export function CustomSignInScreen() {
   async function handleGoogleSignIn() {
     if (!isLoaded || !signIn || busy) return;
 
-    setBusy(true);
     setError('');
 
     try {
@@ -82,7 +92,7 @@ export function CustomSignInScreen() {
       });
     } catch (err) {
       setError(formatClerkError(err));
-      setBusy(false);
+      resetInteractionState();
     }
   }
 
@@ -155,7 +165,13 @@ export function CustomSignInScreen() {
 
   return (
     <div className="auth-form">
-      <h1 className="auth-form-title">Sign in</h1>
+      <AuthFormHeader title="Sign in to InGroups" />
+
+      <GoogleSignInButton disabled={busy} onClick={handleGoogleSignIn} />
+
+      <div className="auth-divider">
+        <span>or</span>
+      </div>
 
       <form className="auth-form-fields" onSubmit={handleSubmit}>
         <label className="input-label" htmlFor="sign-in-email">
@@ -177,19 +193,6 @@ export function CustomSignInScreen() {
           {busy ? 'Continuing…' : 'Continue'}
         </button>
       </form>
-
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
-
-      <button
-        type="button"
-        className="btn auth-oauth-btn"
-        onClick={handleGoogleSignIn}
-        disabled={busy}
-      >
-        Continue with Google
-      </button>
 
       <p className="auth-form-footer">
         Need an account?{' '}
