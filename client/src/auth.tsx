@@ -20,6 +20,7 @@ import {
   isSignUpVerifyPath,
   isSsoCallbackPath,
 } from './auth/paths';
+import { markLandingHelpHint } from './auth/landingHelpHint';
 import { SsoRedirectCallback } from './auth/SsoRedirectCallback';
 import { useWindowPathname } from './auth/useWindowPathname';
 
@@ -131,6 +132,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     configureGuestAuth();
     setGuestActive(true);
     if (isSignInPath(pathname) || isSignUpFormPath(pathname) || isSignUpVerifyPath(pathname)) {
+      markLandingHelpHint();
       window.history.replaceState(null, '', APP_HOME);
     }
   };

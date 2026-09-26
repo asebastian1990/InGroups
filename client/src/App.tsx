@@ -12,8 +12,11 @@ import {
   onChatUpdate,
   isGuestMode,
 } from './api';
+import { confirmOAuthHelpHintIfPending, consumeLandingHelpHint } from './auth/landingHelpHint';
 import { LogoMark } from './components/Logo';
 import { HeaderAuth } from './components/HeaderAuth';
+import { HeaderHelpButton } from './components/HeaderHelpButton';
+import { HowToPlayCoachmark } from './components/HowToPlayCoachmark';
 import { ConfirmModal, HowToPlayModal } from './components/UI';
 import { LandingScreen } from './screens/LandingScreen';
 import { StartScreen } from './screens/StartScreen';
@@ -70,6 +73,8 @@ export default function App() {
   const [licenseReturn, setLicenseReturn] = useState(initialLicenseReturn);
   const [lobbyNameNotice, setLobbyNameNotice] = useState<string | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [showHelpCoachmark, setShowHelpCoachmark] = useState(false);
+  const landingHelpBtnRef = useRef<HTMLButtonElement>(null);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
 
@@ -114,6 +119,24 @@ export default function App() {
       setLandingView('home');
     }
   }, [teamsGuestOnly, landingView]);
+
+  useEffect(() => {
+    confirmOAuthHelpHintIfPending();
+  }, []);
+
+  useEffect(() => {
+    if (!initialized || playerId || landingView !== 'home') return;
+    if (!consumeLandingHelpHint()) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setShowHelpCoachmark(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialized, playerId, landingView]);
+
+  const dismissHelpCoachmark = useCallback(() => {
+    setShowHelpCoachmark(false);
+  }, []);
 
   useEffect(() => {
     if (!teamsEmbed || teamsProfile.inTeams) return;
@@ -219,14 +242,7 @@ export default function App() {
             <span className="app-title">InGroups</span>
           </div>
           <div className="app-header-right">
-            <button
-              type="button"
-              className="header-help-btn"
-              aria-label="How to Play"
-              onClick={() => setShowHowToPlay(true)}
-            >
-              ?
-            </button>
+            <HeaderHelpButton onClick={() => setShowHowToPlay(true)} />
           </div>
         </header>
         <main className="app-content auth-screen">
@@ -251,14 +267,10 @@ export default function App() {
             <span className="app-title">InGroups</span>
           </div>
           <div className="app-header-right">
-            <button
-              type="button"
-              className="header-help-btn"
-              aria-label="How to Play"
+            <HeaderHelpButton
+              buttonRef={landingHelpBtnRef}
               onClick={() => setShowHowToPlay(true)}
-            >
-              ?
-            </button>
+            />
             {!teamsGuestOnly && <HeaderAuth />}
           </div>
         </header>
@@ -298,6 +310,10 @@ export default function App() {
           )}
         </main>
 
+        {showHelpCoachmark && (
+          <HowToPlayCoachmark targetRef={landingHelpBtnRef} onDone={dismissHelpCoachmark} />
+        )}
+
         {showHowToPlay && (
           <HowToPlayModal onClose={() => setShowHowToPlay(false)} />
         )}
@@ -316,14 +332,7 @@ export default function App() {
           <span className="app-title">InGroups</span>
         </div>
         <div className="app-header-right">
-          <button
-            type="button"
-            className="header-help-btn"
-            aria-label="How to Play"
-            onClick={() => setShowHowToPlay(true)}
-          >
-            ?
-          </button>
+          <HeaderHelpButton onClick={() => setShowHowToPlay(true)} />
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
             {guest || teamsEmbed ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
           </button>

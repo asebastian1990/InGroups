@@ -2,6 +2,7 @@ import { useClerk } from '@clerk/clerk-react';
 import { EmailLinkErrorCode, isEmailLinkError } from '@clerk/clerk-react/errors';
 import { useEffect, useRef, useState } from 'react';
 import { formatClerkError } from './clerkErrors';
+import { markLandingHelpHint } from './landingHelpHint';
 import { APP_HOME, SIGN_UP_PATH, emailLinkRedirectUrl } from './paths';
 
 type VerifyState = 'loading' | 'success' | 'error';
@@ -21,6 +22,7 @@ export function SignUpVerifyScreen() {
       redirectUrlComplete: `${window.location.origin}${APP_HOME}`,
     })
       .then(() => {
+        markLandingHelpHint();
         setState('success');
         setMessage('Email verified. Redirecting…');
       })

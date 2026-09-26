@@ -2,6 +2,7 @@ import { useSignUp } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
+import { markLandingHelpHint } from './landingHelpHint';
 import { APP_HOME, SIGN_IN_PATH } from './paths';
 import {
   preferredVerificationStrategy,
@@ -33,6 +34,7 @@ export function CustomSignUpScreen() {
         await signUp.reload();
         if (cancelled || signUp.status !== 'complete' || !signUp.createdSessionId) return;
         await setActive({ session: signUp.createdSessionId });
+        markLandingHelpHint();
         window.location.replace(APP_HOME);
       } catch {
         // Keep polling until the user completes verification in another tab.
@@ -50,6 +52,7 @@ export function CustomSignUpScreen() {
       throw new Error('Sign-up is not complete yet.');
     }
     await setActive({ session: signUp.createdSessionId });
+    markLandingHelpHint();
     window.location.replace(APP_HOME);
   }
 

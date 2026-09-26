@@ -1,9 +1,10 @@
 import { useSignIn } from '@clerk/clerk-react';
-import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuthFormIdleReset } from './useAuthFormIdleReset';
 import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { clearOAuthHelpHintPending, markLandingHelpHint, markOAuthHelpHintPending } from './landingHelpHint';
 import { APP_HOME, SIGN_UP_PATH, signInOAuthRedirectUrl } from './paths';
 import { resendSignInEmailCode, sendSignInEmailCodeOnce } from './signInEmailCode';
 
@@ -28,11 +29,16 @@ export function CustomSignInScreen() {
 
   useAuthFormIdleReset(resetInteractionState);
 
+  useEffect(() => {
+    clearOAuthHelpHintPending();
+  }, []);
+
   async function completeSignIn() {
     if (!signIn || !setActive || signIn.status !== 'complete' || !signIn.createdSessionId) {
       throw new Error('Sign-in is not complete yet.');
     }
     await setActive({ session: signIn.createdSessionId });
+    markLandingHelpHint();
     window.location.replace(APP_HOME);
   }
 
@@ -85,6 +91,7 @@ export function CustomSignInScreen() {
     setError('');
 
     try {
+      markOAuthHelpHintPending();
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: signInOAuthRedirectUrl(),
