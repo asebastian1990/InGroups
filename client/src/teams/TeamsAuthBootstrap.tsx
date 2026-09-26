@@ -1,5 +1,5 @@
 import { useAuth, useSignIn } from '@clerk/clerk-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { authentication } from '@microsoft/teams-js';
 import {
   configureAuth,
@@ -63,6 +63,24 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const autoSsoAttemptedRef = useRef(false);
   const helpHintMarkedRef = useRef(false);
   const clerkSessionConfiguredRef = useRef(false);
+  const teamsSsoSessionRef = useRef<{ signedInEmail: string | null } | null>(null);
+
+  const ensureClerkSessionConfigured = useCallback(async () => {
+    if (clerkSessionConfiguredRef.current) return true;
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return false;
+    } catch {
+      return false;
+    }
+    clerkSessionConfiguredRef.current = true;
+    configureAuth(() => getTokenRef.current());
+    await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
+      console.warn('Failed to sync account with server:', err);
+    });
+    clearTeamsManualAuth();
+    return true;
+  }, []);
 
   const [ready, setReady] = useState(false);
   const [teamsCtxReady, setTeamsCtxReady] = useState(false);
@@ -120,12 +138,16 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
 
       try {
         if (signedIn) {
+          teamsSsoSessionRef.current = { signedInEmail: null };
+          await ensureClerkSessionConfigured();
           nextProfile = {
             ...nextProfile,
             signedInWithTeams: true,
             signedInEmail: null,
           };
         } else if (shouldSkipTeamsAutoSso()) {
+          teamsSsoSessionRef.current = null;
+          clerkSessionConfiguredRef.current = false;
           if (guestChosen) {
             configureGuestAuth();
           } else {
@@ -137,11 +159,20 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
             signedInEmail: null,
           };
         } else if (autoSsoAttemptedRef.current) {
-          nextProfile = {
-            ...nextProfile,
-            signedInWithTeams: false,
-            signedInEmail: null,
-          };
+          if (teamsSsoSessionRef.current) {
+            await ensureClerkSessionConfigured();
+            nextProfile = {
+              ...nextProfile,
+              signedInWithTeams: true,
+              signedInEmail: teamsSsoSessionRef.current.signedInEmail,
+            };
+          } else {
+            nextProfile = {
+              ...nextProfile,
+              signedInWithTeams: false,
+              signedInEmail: null,
+            };
+          }
         } else {
           autoSsoAttemptedRef.current = true;
           const ssoEnabled = await getTeamsSsoStatus();
@@ -166,9 +197,8 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
               }
 
               await activate!({ session: attempt.createdSessionId });
-              await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
-                console.warn('Failed to sync account with server:', err);
-              });
+              teamsSsoSessionRef.current = { signedInEmail: email };
+              await ensureClerkSessionConfigured();
 
               if (!helpHintMarkedRef.current) {
                 helpHintMarkedRef.current = true;
@@ -216,35 +246,28 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, guestChosen]);
+  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, guestChosen, ensureClerkSessionConfigured]);
 
   useEffect(() => {
     if (!ready || !isLoaded) return;
+    if (!isSignedIn && !teamsSsoSessionRef.current) return;
 
-    if (!isSignedIn) {
-      clerkSessionConfiguredRef.current = false;
-      return;
-    }
-
-    if (clerkSessionConfiguredRef.current) return;
-    clerkSessionConfiguredRef.current = true;
-
-    configureAuth(() => getTokenRef.current());
-    syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
-      console.warn('Failed to sync account with server:', err);
+    void ensureClerkSessionConfigured().then((ok) => {
+      if (!ok) return;
+      setProfile((prev) => ({
+        ...prev,
+        signedInWithTeams: true,
+        signedInEmail: prev.signedInEmail ?? teamsSsoSessionRef.current?.signedInEmail ?? null,
+      }));
     });
-    clearTeamsManualAuth();
-    setProfile((prev) => ({
-      ...prev,
-      signedInWithTeams: true,
-      signedInEmail: prev.signedInEmail,
-    }));
-  }, [ready, isLoaded, isSignedIn]);
+  }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured]);
 
   const retryTeamsSso = () => {
     clearTeamsManualAuth();
     setGuestChosen(false);
     autoSsoAttemptedRef.current = false;
+    teamsSsoSessionRef.current = null;
+    clerkSessionConfiguredRef.current = false;
     window.location.replace(TEAMS_HOME);
   };
 
