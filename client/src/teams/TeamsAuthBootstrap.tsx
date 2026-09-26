@@ -1,5 +1,5 @@
 import { useAuth, useSignIn } from '@clerk/clerk-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { authentication } from '@microsoft/teams-js';
 import {
   configureAuth,
@@ -8,10 +8,17 @@ import {
   getTeamsSsoStatus,
   syncAuthenticatedUser,
 } from '../api';
+import { markLandingHelpHint } from '../auth/landingHelpHint';
 import { initTeamsClient } from './initTeams';
 import { TeamsEmbedProvider } from './TeamsEmbedContext';
+import { TeamsManualSignInScreen } from './TeamsManualSignInScreen';
 import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
+import {
+  clearTeamsManualAuth,
+  markTeamsManualAuth,
+  shouldSkipTeamsAutoSso,
+} from './teamsManualAuth';
 import { withTimeout } from './withTimeout';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
@@ -31,9 +38,28 @@ function LoadingScreen({ detail }: { detail?: string }) {
 export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const signInRef = useRef(signIn);
+  signInRef.current = signIn;
+  const setActiveRef = useRef(setActive);
+  setActiveRef.current = setActive;
+  const wasSignedInRef = useRef(isSignedIn);
+
+  const teamsCtxRef = useRef<TeamsProfile>(defaultTeamsProfile);
   const [ready, setReady] = useState(false);
+  const [teamsCtxReady, setTeamsCtxReady] = useState(false);
   const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
   const [clerkTimedOut, setClerkTimedOut] = useState(false);
+  const [guestChosen, setGuestChosen] = useState(false);
+
+  useEffect(() => {
+    if (wasSignedInRef.current && !isSignedIn) {
+      markTeamsManualAuth();
+      setGuestChosen(false);
+    }
+    wasSignedInRef.current = isSignedIn;
+  }, [isSignedIn]);
 
   useEffect(() => {
     if (isLoaded && signInLoaded) return;
@@ -52,33 +78,58 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     (async () => {
       const ctxProfile = await initTeamsClient();
       if (cancelled) return;
+      teamsCtxRef.current = { ...defaultTeamsProfile, ...ctxProfile };
+      setProfile(teamsCtxRef.current);
+      setTeamsCtxReady(true);
+    })();
 
-      let nextProfile: TeamsProfile = { ...ctxProfile };
-      setProfile(nextProfile);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-      const clerkReady = isLoaded && signInLoaded;
-      if (!clerkReady && !clerkTimedOut) return;
+  useEffect(() => {
+    if (!teamsCtxReady) return;
+
+    const clerkReady = isLoaded && signInLoaded;
+    if (!clerkReady && !clerkTimedOut) return;
+
+    let cancelled = false;
+
+    (async () => {
+      let nextProfile: TeamsProfile = { ...teamsCtxRef.current };
 
       if (!clerkReady) {
         configureGuestAuth();
-        if (!cancelled) setReady(true);
+        if (!cancelled) {
+          setProfile((prev) => ({ ...prev, signedInWithTeams: false, signedInEmail: null }));
+          setReady(true);
+        }
         return;
       }
 
       try {
         if (isSignedIn) {
-          configureAuth(() => getToken());
-          await syncAuthenticatedUser(getToken).catch((err) => {
+          configureAuth(() => getTokenRef.current());
+          await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
             console.warn('Failed to sync account with server:', err);
           });
+          clearTeamsManualAuth();
           nextProfile = {
             ...nextProfile,
             signedInWithTeams: true,
             signedInEmail: null,
           };
+        } else if (shouldSkipTeamsAutoSso()) {
+          configureGuestAuth();
+          nextProfile = {
+            ...nextProfile,
+            signedInWithTeams: false,
+            signedInEmail: null,
+          };
         } else {
           const ssoEnabled = await getTeamsSsoStatus();
-          if (ssoEnabled && ctxProfile.inTeams) {
+          if (ssoEnabled && nextProfile.inTeams) {
             try {
               const teamsToken = await withTimeout(
                 authentication.getAuthToken(),
@@ -87,21 +138,24 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
               );
               const { signInToken, email, displayName } = await exchangeTeamsSsoToken(teamsToken);
 
-              if (!signIn) {
+              const signInClient = signInRef.current;
+              const activate = setActiveRef.current;
+              if (!signInClient) {
                 throw new Error('Clerk sign-in is unavailable.');
               }
 
-              const attempt = await signIn.create({ strategy: 'ticket', ticket: signInToken });
+              const attempt = await signInClient.create({ strategy: 'ticket', ticket: signInToken });
               if (attempt.status !== 'complete' || !attempt.createdSessionId) {
                 throw new Error('Clerk sign-in did not complete.');
               }
 
-              await setActive!({ session: attempt.createdSessionId });
-              configureAuth(() => getToken());
-              await syncAuthenticatedUser(getToken).catch((err) => {
+              await activate!({ session: attempt.createdSessionId });
+              configureAuth(() => getTokenRef.current());
+              await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
                 console.warn('Failed to sync account with server:', err);
               });
 
+              markLandingHelpHint();
               nextProfile = {
                 ...nextProfile,
                 displayName: displayName ?? nextProfile.displayName,
@@ -111,9 +165,19 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
             } catch (err) {
               console.warn('Teams SSO unavailable, using guest mode:', err);
               configureGuestAuth();
+              nextProfile = {
+                ...nextProfile,
+                signedInWithTeams: false,
+                signedInEmail: null,
+              };
             }
           } else {
             configureGuestAuth();
+            nextProfile = {
+              ...nextProfile,
+              signedInWithTeams: false,
+              signedInEmail: null,
+            };
           }
         }
 
@@ -125,7 +189,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
         console.error('Teams bootstrap error:', err);
         configureGuestAuth();
         if (!cancelled) {
-          setProfile(nextProfile);
+          setProfile((prev) => ({ ...prev, signedInWithTeams: false, signedInEmail: null }));
           setReady(true);
         }
       }
@@ -134,7 +198,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, signInLoaded, clerkTimedOut, isSignedIn, getToken, signIn, setActive]);
+  }, [teamsCtxReady, isLoaded, signInLoaded, clerkTimedOut, isSignedIn]);
 
   if (!ready) {
     return (
@@ -145,6 +209,14 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
             : undefined
         }
       />
+    );
+  }
+
+  const showManualSignIn = !isSignedIn && shouldSkipTeamsAutoSso() && !guestChosen;
+
+  if (showManualSignIn) {
+    return (
+      <TeamsManualSignInScreen onContinueAsGuest={() => setGuestChosen(true)} />
     );
   }
 

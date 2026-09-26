@@ -390,7 +390,7 @@ body.teams-theme-dark .teams-context-banner {
 .help-coachmark-layer {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 200;
   pointer-events: none;
 }
 

@@ -23,6 +23,7 @@ export function HowToPlayCoachmark({
     if (!target) return;
 
     const rect = target.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
     setSpotlight({
       top: rect.top - SPOTLIGHT_PAD,
       left: rect.left - SPOTLIGHT_PAD,
@@ -32,16 +33,33 @@ export function HowToPlayCoachmark({
   }, [targetRef]);
 
   useLayoutEffect(() => {
-    syncSpotlight();
+    let attempts = 0;
+    let rafId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const attachObserver = () => {
+      const target = targetRef.current;
+      if (!target || resizeObserver) return;
+      resizeObserver = new ResizeObserver(syncSpotlight);
+      resizeObserver.observe(target);
+    };
+
+    const trySync = () => {
+      syncSpotlight();
+      attachObserver();
+      attempts += 1;
+      if (!targetRef.current && attempts < 12) {
+        rafId = window.requestAnimationFrame(trySync);
+      }
+    };
+
+    trySync();
 
     window.addEventListener('resize', syncSpotlight);
     window.addEventListener('scroll', syncSpotlight, true);
 
-    const target = targetRef.current;
-    const resizeObserver = target ? new ResizeObserver(syncSpotlight) : null;
-    if (target && resizeObserver) resizeObserver.observe(target);
-
     return () => {
+      window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', syncSpotlight);
       window.removeEventListener('scroll', syncSpotlight, true);
       resizeObserver?.disconnect();

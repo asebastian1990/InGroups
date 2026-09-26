@@ -12,7 +12,11 @@ import {
   onChatUpdate,
   isGuestMode,
 } from './api';
-import { confirmOAuthHelpHintIfPending, consumeLandingHelpHint } from './auth/landingHelpHint';
+import {
+  confirmOAuthHelpHintIfPending,
+  consumeLandingHelpHint,
+  peekLandingHelpHint,
+} from './auth/landingHelpHint';
 import { LogoMark } from './components/Logo';
 import { HeaderAuth } from './components/HeaderAuth';
 import { HeaderHelpButton } from './components/HeaderHelpButton';
@@ -132,7 +136,7 @@ export default function App() {
 
   useEffect(() => {
     if (!initialized || playerId || landingView !== 'home') return;
-    if (!consumeLandingHelpHint()) return;
+    if (!peekLandingHelpHint()) return;
 
     const frame = window.requestAnimationFrame(() => {
       setShowHelpCoachmark(true);
@@ -141,6 +145,7 @@ export default function App() {
   }, [initialized, playerId, landingView]);
 
   const dismissHelpCoachmark = useCallback(() => {
+    consumeLandingHelpHint();
     setShowHelpCoachmark(false);
   }, []);
 

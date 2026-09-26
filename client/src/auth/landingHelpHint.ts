@@ -36,6 +36,14 @@ export function confirmOAuthHelpHintIfPending(): void {
   }
 }
 
+export function peekLandingHelpHint(): boolean {
+  try {
+    return sessionStorage.getItem(STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function consumeLandingHelpHint(): boolean {
   try {
     if (sessionStorage.getItem(STORAGE_KEY) !== '1') return false;

@@ -5,12 +5,15 @@ import { AuthFormHeader } from './AuthFormHeader';
 import { formatClerkError } from './clerkErrors';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { clearOAuthHelpHintPending, markLandingHelpHint, markOAuthHelpHintPending } from './landingHelpHint';
+import { clearTeamsManualAuth } from '../teams/teamsManualAuth';
 import { APP_HOME, SIGN_UP_PATH, signInOAuthRedirectUrl } from './paths';
 import { resendSignInEmailCode, sendSignInEmailCodeOnce } from './signInEmailCode';
 
+const TEAMS_APP_HOME = '/teams';
+
 type Step = 'form' | 'verify-code';
 
-export function CustomSignInScreen() {
+export function CustomSignInScreen({ teamsEmbed = false }: { teamsEmbed?: boolean }) {
   const { isLoaded, signIn, setActive } = useSignIn();
   const submittingRef = useRef(false);
   const [step, setStep] = useState<Step>('form');
@@ -39,7 +42,12 @@ export function CustomSignInScreen() {
     }
     await setActive({ session: signIn.createdSessionId });
     markLandingHelpHint();
-    window.location.replace(APP_HOME);
+    if (teamsEmbed) {
+      clearTeamsManualAuth();
+      window.location.replace(TEAMS_APP_HOME);
+    } else {
+      window.location.replace(APP_HOME);
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -95,7 +103,7 @@ export function CustomSignInScreen() {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: signInOAuthRedirectUrl(),
-        redirectUrlComplete: `${window.location.origin}${APP_HOME}`,
+        redirectUrlComplete: `${window.location.origin}${teamsEmbed ? TEAMS_APP_HOME : APP_HOME}`,
       });
     } catch (err) {
       setError(formatClerkError(err));

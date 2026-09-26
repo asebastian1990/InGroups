@@ -22,6 +22,7 @@ export function TeamsProviders({ children }: { children: ReactNode }) {
       publishableKey={publishableKey}
       signInUrl={SIGN_IN_PATH}
       signUpUrl={SIGN_UP_PATH}
+      afterSignOutUrl="/teams"
       allowedRedirectOrigins={[window.location.origin]}
     >
       <TeamsAuthBootstrap>{children}</TeamsAuthBootstrap>

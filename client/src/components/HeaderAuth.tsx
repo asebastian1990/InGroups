@@ -1,7 +1,10 @@
 import { UserButton } from '@clerk/clerk-react';
 import { exitGuestMode, isGuestMode } from '../api';
+import { useTeamsEmbed } from '../teams/TeamsEmbedContext';
 
 export function HeaderAuth() {
+  const teamsEmbed = useTeamsEmbed();
+  const afterSignOutUrl = teamsEmbed ? '/teams' : '/sign-in';
   if (isGuestMode()) {
     return (
       <button
@@ -17,5 +20,5 @@ export function HeaderAuth() {
     );
   }
 
-  return <UserButton afterSignOutUrl="/sign-in" />;
+  return <UserButton afterSignOutUrl={afterSignOutUrl} />;
 }
