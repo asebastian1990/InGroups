@@ -250,6 +250,25 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     });
   }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured, markClerkUiEnabled]);
 
+  useEffect(() => {
+    if (!ready) return;
+
+    const refreshClerkSession = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!clerkUiEnabledRef.current && !teamsSsoSessionRef.current && !readTeamsClerkLatch()) {
+        return;
+      }
+      void ensureClerkSessionConfigured(true);
+    };
+
+    document.addEventListener('visibilitychange', refreshClerkSession);
+    window.addEventListener('focus', refreshClerkSession);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshClerkSession);
+      window.removeEventListener('focus', refreshClerkSession);
+    };
+  }, [ready, ensureClerkSessionConfigured]);
+
   const handleSsoComplete = useCallback(
     (result: TeamsSsoResult) => {
       if (result.ok) {
