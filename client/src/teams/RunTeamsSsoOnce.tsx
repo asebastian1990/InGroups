@@ -1,7 +1,7 @@
-import { useSignIn } from '@clerk/clerk-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { authentication } from '@microsoft/teams-js';
 import { exchangeTeamsSsoToken } from '../api';
+import { getTeamsSignInApi } from './teamsSignInApi';
 import { withTimeout } from './withTimeout';
 
 const TEAMS_SSO_TOKEN_TIMEOUT_MS = 15_000;
@@ -10,15 +10,26 @@ export type TeamsSsoResult =
   | { ok: true; email: string | null; displayName: string | null }
   | { ok: false };
 
-/** Runs Teams ticket SSO once, then unmounts — keeps useSignIn out of the main app tree. */
+/** Runs Teams ticket SSO once using the persistent TeamsClerkSignInHost sign-in API. */
 export function RunTeamsSsoOnce({ onComplete }: { onComplete: (result: TeamsSsoResult) => void }) {
-  const { isLoaded, signIn, setActive } = useSignIn();
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const [signInReady, setSignInReady] = useState(() => getTeamsSignInApi() !== null);
 
   useEffect(() => {
-    if (!isLoaded || !signIn || !setActive || startedRef.current) return;
+    if (signInReady) return;
+    const id = window.setInterval(() => {
+      if (getTeamsSignInApi()) {
+        setSignInReady(true);
+        window.clearInterval(id);
+      }
+    }, 50);
+    return () => window.clearInterval(id);
+  }, [signInReady]);
+
+  useEffect(() => {
+    if (!signInReady || startedRef.current) return;
     startedRef.current = true;
 
     let cancelled = false;
@@ -31,12 +42,15 @@ export function RunTeamsSsoOnce({ onComplete }: { onComplete: (result: TeamsSsoR
           'Teams SSO token',
         );
         const { signInToken, email, displayName } = await exchangeTeamsSsoToken(teamsToken);
+        const { signIn, setActive } = getTeamsSignInApi() ?? {};
+        if (!signIn || !setActive) {
+          throw new Error('Clerk sign-in is unavailable.');
+        }
         const attempt = await signIn.create({ strategy: 'ticket', ticket: signInToken });
         if (attempt.status !== 'complete' || !attempt.createdSessionId) {
           throw new Error('Clerk sign-in did not complete.');
         }
         await setActive({ session: attempt.createdSessionId });
-        await new Promise((resolve) => setTimeout(resolve, 150));
         if (!cancelled) {
           onCompleteRef.current({ ok: true, email, displayName });
         }
@@ -51,7 +65,7 @@ export function RunTeamsSsoOnce({ onComplete }: { onComplete: (result: TeamsSsoR
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, signIn, setActive]);
+  }, [signInReady]);
 
   return null;
 }

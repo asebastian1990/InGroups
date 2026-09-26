@@ -1,6 +1,7 @@
 import { ClerkProvider } from '@clerk/clerk-react';
 import type { ReactNode } from 'react';
 import { TeamsAuthBootstrap } from './TeamsAuthBootstrap';
+import { TeamsClerkSignInHost } from './TeamsClerkSignInHost';
 import { teamsHomeWithSignedOut } from './teamsManualAuth';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -26,6 +27,7 @@ export function TeamsProviders({ children }: { children: ReactNode }) {
       afterSignOutUrl={teamsHomeWithSignedOut()}
       allowedRedirectOrigins={[window.location.origin]}
     >
+      <TeamsClerkSignInHost />
       <TeamsAuthBootstrap>{children}</TeamsAuthBootstrap>
     </ClerkProvider>
   );

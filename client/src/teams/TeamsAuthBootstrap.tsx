@@ -237,13 +237,10 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   }, [ready, isLoaded, isSignedIn, ensureClerkSessionConfigured, markClerkUiEnabled]);
 
   const handleSsoComplete = useCallback(
-    async (result: TeamsSsoResult) => {
-      setSsoPhase('done');
-
+    (result: TeamsSsoResult) => {
       if (result.ok) {
         teamsSsoSessionRef.current = { signedInEmail: result.email };
         markClerkUiEnabled();
-        await ensureClerkSessionConfigured(true);
         if (!helpHintMarkedRef.current) {
           helpHintMarkedRef.current = true;
           markLandingHelpHint();
@@ -254,9 +251,12 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
           signedInWithTeams: true,
           signedInEmail: result.email,
         });
+        setSsoPhase('done');
+        void ensureClerkSessionConfigured(true);
         return;
       }
 
+      setSsoPhase('done');
       configureGuestAuth();
       finishReady({ ...teamsCtxRef.current, signedInWithTeams: false, signedInEmail: null });
     },

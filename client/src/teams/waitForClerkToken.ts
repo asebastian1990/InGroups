@@ -1,8 +1,8 @@
 /** Clerk session can lag behind setActive in the Teams iframe. */
 export async function waitForClerkToken(
   getToken: () => Promise<string | null>,
-  attempts = 40,
-  delayMs = 100,
+  attempts = 25,
+  delayMs = 200,
 ): Promise<string | null> {
   for (let i = 0; i < attempts; i++) {
     try {
