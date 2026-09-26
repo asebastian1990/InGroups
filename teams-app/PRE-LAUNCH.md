@@ -139,7 +139,7 @@ Keep the Development instance for local work; create and configure **Production*
 | Sign-in URL | `https://ingroups.annaliese-sebastian.com/sign-in` |
 | Sign-up URL | `https://ingroups.annaliese-sebastian.com/sign-up` |
 
-InGroups uses embedded `<SignIn>` on `/sign-in` and `<SignUp>` on `/sign-up` (see `client/src/auth.tsx`). Do **not** point users at Clerk Account Portal for normal sign-in.
+InGroups uses custom sign-in and sign-up flows on `/sign-in` and `/sign-up` (see `client/src/auth.tsx`). Do **not** point users at Clerk Account Portal for normal sign-in.
 
 **Configure → Account Portal → Redirects** (fallbacks only — use **relative** paths):
 

@@ -39,3 +39,7 @@ export function emailLinkRedirectUrl(): string {
 export function signUpOAuthRedirectUrl(): string {
   return `${window.location.origin}${SIGN_UP_PATH}/sso-callback`;
 }
+
+export function signInOAuthRedirectUrl(): string {
+  return `${window.location.origin}${SIGN_IN_PATH}/sso-callback`;
+}

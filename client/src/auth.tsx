@@ -1,7 +1,6 @@
 import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
-  SignIn,
   useAuth,
 } from '@clerk/clerk-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -12,6 +11,7 @@ import {
   resetAuth,
   syncAuthenticatedUser,
 } from './api';
+import { CustomSignInScreen } from './auth/CustomSignInScreen';
 import { CustomSignUpScreen } from './auth/CustomSignUpScreen';
 import { SignUpVerifyScreen } from './auth/SignUpVerifyScreen';
 import {
@@ -26,14 +26,6 @@ import {
 } from './auth/paths';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-const signInAppearance = {
-  elements: {
-    rootBox: { width: '100%', maxWidth: '100%' },
-    cardBox: { width: '100%', maxWidth: '100%' },
-    card: { width: '100%', maxWidth: '100%' },
-  },
-};
 
 function LoadingScreen() {
   return (
@@ -73,16 +65,7 @@ function AuthScreenLayout({
 function SignInScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
   return (
     <AuthScreenLayout onContinueAsGuest={onContinueAsGuest}>
-      <SignIn
-        routing="path"
-        path={SIGN_IN_PATH}
-        oauthFlow="redirect"
-        appearance={signInAppearance}
-        signInUrl={SIGN_IN_PATH}
-        signUpUrl={SIGN_UP_PATH}
-        fallbackRedirectUrl={APP_HOME}
-        signUpFallbackRedirectUrl={APP_HOME}
-      />
+      <CustomSignInScreen />
     </AuthScreenLayout>
   );
 }
