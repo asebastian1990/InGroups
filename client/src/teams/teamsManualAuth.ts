@@ -1,3 +1,5 @@
+import { clearTeamsClerkLatch } from './teamsSessionLatch';
+
 /** Legacy flag — no longer used; clear so reopen runs Teams SSO. */
 try {
   sessionStorage.removeItem('ingroups_teams_skip_auto_sso');
@@ -24,6 +26,7 @@ export function consumeTeamsSignedOutFromUrl(): boolean {
     const next = `${url.pathname}${url.search}${url.hash}`;
     window.history.replaceState(null, '', next || TEAMS_HOME);
     skipAutoSsoThisLoad = true;
+    clearTeamsClerkLatch();
     return true;
   } catch {
     return false;

@@ -387,6 +387,25 @@ body.teams-theme-dark .teams-context-banner {
   color: var(--brand-teal);
 }
 
+.teams-account-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--gray-200);
+  background: var(--brand-teal);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.teams-account-btn:hover {
+  filter: brightness(0.95);
+}
+
 .help-coachmark-layer {
   position: fixed;
   inset: 0;

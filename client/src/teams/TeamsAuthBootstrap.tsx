@@ -20,6 +20,11 @@ import {
   shouldSkipTeamsAutoSso,
   TEAMS_HOME,
 } from './teamsManualAuth';
+import {
+  clearTeamsClerkLatch,
+  latchTeamsClerkSession,
+  readTeamsClerkLatch,
+} from './teamsSessionLatch';
 import { waitForClerkToken } from './waitForClerkToken';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
@@ -55,37 +60,21 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const teamsCtxRef = useRef<TeamsProfile>(defaultTeamsProfile);
   const helpHintMarkedRef = useRef(false);
   const clerkSessionConfiguredRef = useRef(false);
-  const teamsSsoSessionRef = useRef<{ signedInEmail: string | null } | null>(null);
+  const initialLatch = readTeamsClerkLatch();
+  const teamsSsoSessionRef = useRef<{ signedInEmail: string | null } | null>(
+    initialLatch ? { signedInEmail: initialLatch.email } : null,
+  );
   const readyLatchRef = useRef(false);
-  const clerkUiEnabledRef = useRef(false);
+  const clerkUiEnabledRef = useRef(initialLatch !== null);
 
-  const ensureClerkSessionConfigured = useCallback(async (waitForSession = false) => {
-    if (clerkSessionConfiguredRef.current) return true;
-    const token = waitForSession
-      ? await waitForClerkToken(() => getTokenRef.current())
-      : await waitForClerkToken(() => getTokenRef.current(), 3, 50);
-    if (!token) return false;
-    clerkSessionConfiguredRef.current = true;
+  const markClerkUiEnabled = useCallback((email?: string | null) => {
     clerkUiEnabledRef.current = true;
-    setClerkUiEnabled(true);
-    configureAuth(() => getTokenRef.current());
-    await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
-      console.warn('Failed to sync account with server:', err);
-    });
-    clearTeamsManualAuth();
-    return true;
-  }, []);
-
-  const [ready, setReady] = useState(false);
-  const [teamsCtxReady, setTeamsCtxReady] = useState(false);
-  const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
-  const [clerkTimedOut, setClerkTimedOut] = useState(false);
-  const [guestChosen, setGuestChosen] = useState(false);
-  const [clerkUiEnabled, setClerkUiEnabled] = useState(false);
-  const [ssoPhase, setSsoPhase] = useState<'idle' | 'running' | 'done'>('idle');
-
-  const markClerkUiEnabled = useCallback(() => {
-    clerkUiEnabledRef.current = true;
+    const latchedEmail =
+      email !== undefined
+        ? email
+        : teamsSsoSessionRef.current?.signedInEmail ?? readTeamsClerkLatch()?.email ?? null;
+    teamsSsoSessionRef.current = { signedInEmail: latchedEmail };
+    latchTeamsClerkSession(latchedEmail);
     setClerkUiEnabled(true);
   }, []);
 
@@ -94,7 +83,32 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     setClerkUiEnabled(false);
     teamsSsoSessionRef.current = null;
     clerkSessionConfiguredRef.current = false;
+    clearTeamsClerkLatch();
   }, []);
+
+  const ensureClerkSessionConfigured = useCallback(async (waitForSession = false) => {
+    if (clerkSessionConfiguredRef.current) return true;
+    const token = waitForSession
+      ? await waitForClerkToken(() => getTokenRef.current())
+      : await waitForClerkToken(() => getTokenRef.current(), 3, 50);
+    if (!token) return false;
+    clerkSessionConfiguredRef.current = true;
+    markClerkUiEnabled();
+    configureAuth(() => getTokenRef.current());
+    await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
+      console.warn('Failed to sync account with server:', err);
+    });
+    clearTeamsManualAuth();
+    return true;
+  }, [markClerkUiEnabled]);
+
+  const [ready, setReady] = useState(false);
+  const [teamsCtxReady, setTeamsCtxReady] = useState(false);
+  const [profile, setProfile] = useState<TeamsProfile>(defaultTeamsProfile);
+  const [clerkTimedOut, setClerkTimedOut] = useState(false);
+  const [guestChosen, setGuestChosen] = useState(false);
+  const [clerkUiEnabled, setClerkUiEnabled] = useState(() => initialLatch !== null);
+  const [ssoPhase, setSsoPhase] = useState<'idle' | 'running' | 'done'>('idle');
 
   const finishReady = useCallback((nextProfile: TeamsProfile) => {
     setProfile((prev) => {
@@ -240,7 +254,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     (result: TeamsSsoResult) => {
       if (result.ok) {
         teamsSsoSessionRef.current = { signedInEmail: result.email };
-        markClerkUiEnabled();
+        markClerkUiEnabled(result.email);
         if (!helpHintMarkedRef.current) {
           helpHintMarkedRef.current = true;
           markLandingHelpHint();

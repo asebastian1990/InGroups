@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Logo } from '../components/Logo';
 import { createRoom, joinRoom, isGuestMode } from '../api';
-import { useTeamsProfile } from '../teams/TeamsEmbedContext';
+import { useTeamsEmbed, useTeamsProfile } from '../teams/TeamsEmbedContext';
 import type { ClientRoomState } from '@shared/types';
 
 interface Props {
@@ -23,9 +23,11 @@ function defaultNameFromClerkUser(user: NonNullable<ReturnType<typeof useUser>['
 }
 
 export function LandingScreen({ onEnter, onNavigate }: Props) {
+  const teamsEmbed = useTeamsEmbed();
   const { user, isLoaded: userLoaded } = useUser();
   const teamsProfile = useTeamsProfile();
   const guest = isGuestMode();
+  const teamsSignedIn = teamsEmbed && teamsProfile.signedInWithTeams;
   const defaultGuestName = teamsProfile.displayName?.trim() || 'Guest';
   const [name, setName] = useState(() => (guest ? defaultGuestName : ''));
 
@@ -35,9 +37,16 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
+    if (teamsSignedIn && teamsProfile.signedInEmail) {
+      const fromEmail = teamsProfile.signedInEmail.split('@')[0] ?? '';
+      if (fromEmail) {
+        setName((current) => current || fromEmail);
+      }
+      return;
+    }
     if (guest || !userLoaded || !user) return;
     setName((current) => current || defaultNameFromClerkUser(user));
-  }, [guest, userLoaded, user]);
+  }, [teamsSignedIn, teamsProfile.signedInEmail, guest, userLoaded, user]);
 
   useEffect(() => {
     if (!guest || !teamsProfile.displayName) return;
