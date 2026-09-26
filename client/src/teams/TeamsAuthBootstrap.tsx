@@ -200,27 +200,26 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     if (hasStoredSession) {
       if (readyLatchRef.current) return;
 
-      let cancelled = false;
       if (!teamsSsoSessionRef.current && latched) {
         teamsSsoSessionRef.current = { signedInEmail: latched.email };
       }
       markClerkUiEnabled(latched?.email);
-
-      void (async () => {
-        await ensureClerkSessionConfigured(true);
-        if (cancelled) return;
-        finishReady({
-          ...teamsCtxRef.current,
-          signedInWithTeams: true,
-          signedInEmail:
-            teamsSsoSessionRef.current?.signedInEmail ?? latched?.email ?? null,
-        });
-        setSsoPhase('done');
-      })();
-
-      return () => {
-        cancelled = true;
-      };
+      finishReady({
+        ...teamsCtxRef.current,
+        signedInWithTeams: true,
+        signedInEmail:
+          teamsSsoSessionRef.current?.signedInEmail ?? latched?.email ?? null,
+      });
+      setSsoPhase('done');
+      void ensureClerkSessionConfigured(true).then((ok) => {
+        if (ok || shouldSkipTeamsAutoSso()) return;
+        console.warn('[teams-auth] Stored Teams session had no Clerk token; retrying SSO.');
+        markClerkUiDisabled();
+        readyLatchRef.current = false;
+        setReady(false);
+        setSsoPhase('running');
+      });
+      return;
     }
 
     if (isSignedInRef.current) return;
