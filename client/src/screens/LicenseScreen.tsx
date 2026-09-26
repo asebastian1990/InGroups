@@ -185,7 +185,8 @@ export function LicenseScreen({
             ))}
           </ul>
           <p className="info-msg" style={{ fontSize: '0.8rem', marginTop: 8 }}>
-            Share these with others or activate one on another account.
+            Purchased keys are stored here until activated. Share them with others or activate one on
+            this account below.
           </p>
         </div>
       )}

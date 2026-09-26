@@ -72,7 +72,7 @@ export function LicenseShopModal({ onClose }: Props) {
     <Modal title="Get a License" onClose={onClose}>
       <p className="shop-lead">
         Each license is a <strong>one-time purchase</strong> that unlocks expanded and custom word sets for one account forever.
-        Buy extra licenses to share with others.
+        Keys are saved to your License page until you activate them for yourself or someone else.
       </p>
 
       <div className="shop-price-row">

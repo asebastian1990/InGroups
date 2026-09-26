@@ -128,18 +128,6 @@ export async function fulfillLicenseOrder(orderId: string): Promise<string[]> {
     });
   }
 
-  const [active] = await db
-    .select({ key: licenses.key })
-    .from(licenses)
-    .where(eq(licenses.activatedBy, order.buyerClerkId));
-
-  if (!active && keys.length > 0) {
-    await db
-      .update(licenses)
-      .set({ activatedBy: order.buyerClerkId, activatedAt: now })
-      .where(eq(licenses.key, keys[0]));
-  }
-
   await db
     .update(licenseOrders)
     .set({ status: 'completed', completedAt: now })
