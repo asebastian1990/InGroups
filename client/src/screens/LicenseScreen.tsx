@@ -147,6 +147,26 @@ export function LicenseScreen({
         </p>
       )}
 
+      {!activeLicense && (
+        <div style={{ marginBottom: 20 }}>
+          <label className="input-label">Enter License Key</label>
+          <input
+            className="input"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
+          />
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: 12 }}
+            onClick={handleActivate}
+            disabled={loading || !key.trim()}
+          >
+            {loading ? 'Activating…' : 'Activate'}
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
         className="btn btn-primary btn-full"
@@ -184,31 +204,7 @@ export function LicenseScreen({
               </li>
             ))}
           </ul>
-          <p className="info-msg" style={{ fontSize: '0.8rem', marginTop: 8 }}>
-            Purchased keys are stored here until activated. Share them with others or activate one on
-            this account below.
-          </p>
         </div>
-      )}
-
-      {!activeLicense && (
-        <>
-          <label className="input-label">Enter License Key</label>
-          <input
-            className="input"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
-          />
-          <button
-            className="btn btn-primary"
-            style={{ marginTop: 12 }}
-            onClick={handleActivate}
-            disabled={loading || !key.trim()}
-          >
-            {loading ? 'Activating…' : 'Activate'}
-          </button>
-        </>
       )}
 
       {error && <p className="error-msg" style={{ marginTop: 8 }}>{error}</p>}
