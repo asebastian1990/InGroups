@@ -227,6 +227,9 @@ function HowToPlayCardHostSettings() {
           <strong>In Group Speed Bonus:</strong> When the timer is enabled, set whether the In Group
           gets a bonus for locking in quickly (see &ldquo;Scoring&rdquo;)
         </li>
+        <li>
+          <strong>Start Round / End Round:</strong> Start the game round / end the round early.
+        </li>
       </ul>
     </div>
   );
@@ -240,9 +243,11 @@ function HowToPlayCardPremiumOptions() {
         license. This is a one-time purchase that unlocks:
       </p>
       <ul className="how-to-play-list">
-        <li>50+ premium word sets</li>
         <li>
-          The ability to create custom word sets:
+          <strong>50+ premium word sets</strong>
+        </li>
+        <li>
+          <strong>The ability to create custom word sets:</strong>
           <ul className="how-to-play-sublist">
             <li>
               From the main menu (before Hosting or Joining a game), click Create Word Set

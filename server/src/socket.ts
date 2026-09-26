@@ -173,6 +173,34 @@ function removePlayerFromRoom(io: Server, room: RoomState, playerId: string) {
   broadcastRoom(io, room);
 }
 
+/** Leave socket channel first so the player does not receive gameClosed/roomUpdate for this room. */
+function leavePlayerFromRoom(io: Server, socket: Socket, playerId: string, room: RoomState) {
+  socket.leave(room.code);
+  clearDisconnectTimer(playerId);
+  if (room.hostId === playerId) {
+    closeRoom(io, room, 'The host has ended the game.');
+  } else {
+    removePlayerFromRoom(io, room, playerId);
+  }
+}
+
+function detachPlayerFromAllRooms(io: Server, socket: Socket, playerId: string) {
+  let room = getRoomForPlayer(playerId);
+  while (room) {
+    leavePlayerFromRoom(io, socket, playerId, room);
+    room = getRoomForPlayer(playerId);
+  }
+}
+
+function detachPlayerFromOtherRooms(io: Server, socket: Socket, playerId: string, keepCode: string) {
+  const keep = keepCode.toUpperCase();
+  for (const room of [...rooms.values()]) {
+    if (room.code === keep) continue;
+    if (!room.players.some((p) => p.id === playerId)) continue;
+    leavePlayerFromRoom(io, socket, playerId, room);
+  }
+}
+
 function kickPlayerFromRoom(io: Server, room: RoomState, playerId: string, reason: string) {
   clearDisconnectTimer(playerId);
   const socketId = playerRooms.get(playerId);
@@ -331,6 +359,7 @@ export function setupSocketHandlers(io: Server) {
     socket.on('createRoom', ({ name }: { name: string }, cb) => {
       const playerId = playerAuthId;
       currentPlayerId = playerId;
+      detachPlayerFromAllRooms(io, socket, playerId);
       const room = createRoom(name, playerId);
       rooms.set(room.code, room);
       playerRooms.set(playerId, socket.id);
@@ -350,6 +379,11 @@ export function setupSocketHandlers(io: Server) {
       }
       const playerId = playerAuthId;
       currentPlayerId = playerId;
+
+      const priorRoom = getRoomForPlayer(playerId);
+      if (priorRoom && priorRoom.code !== room.code) {
+        detachPlayerFromAllRooms(io, socket, playerId);
+      }
 
       const existing = room.players.find((p) => p.id === playerId);
       if (existing) {
@@ -406,6 +440,7 @@ export function setupSocketHandlers(io: Server) {
         return;
       }
       currentPlayerId = playerId;
+      detachPlayerFromOtherRooms(io, socket, playerId, room.code);
       clearDisconnectTimer(playerId);
       playerRooms.set(playerId, socket.id);
       socket.join(room.code);

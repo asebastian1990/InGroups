@@ -77,12 +77,15 @@ export default function App() {
   const landingHelpBtnRef = useRef<HTMLButtonElement>(null);
   const inGameRef = useRef(false);
   const sessionActiveRef = useRef(false);
+  const activeRoomCodeRef = useRef<string | null>(null);
 
   inGameRef.current = playerId !== null && room !== null;
   sessionActiveRef.current = playerId !== null && room !== null;
+  if (room?.code) activeRoomCodeRef.current = room.code;
 
   const exitToLanding = useCallback((message?: string) => {
     sessionActiveRef.current = false;
+    activeRoomCodeRef.current = null;
     clearSession();
     setPlayerId(null);
     setRoom(null);
@@ -95,6 +98,7 @@ export default function App() {
 
   const applySession = useCallback((pid: string, sessionRoom: ClientRoomState) => {
     sessionActiveRef.current = true;
+    activeRoomCodeRef.current = sessionRoom.code;
     setPlayerId(pid);
     setRoom(sessionRoom);
     setScreen(screenForRoom(sessionRoom));
@@ -102,6 +106,8 @@ export default function App() {
 
   const handleRoomUpdate = useCallback((updated: ClientRoomState) => {
     if (!sessionActiveRef.current) return;
+    const activeCode = activeRoomCodeRef.current;
+    if (activeCode && updated.code !== activeCode) return;
     setRoom((prev) => ({
       ...updated,
       chatMessages: updated.chatMessages ?? prev?.chatMessages ?? [],
@@ -208,6 +214,7 @@ export default function App() {
     setClosedMessage(null);
     setLandingView('home');
     sessionActiveRef.current = true;
+    if (initialRoom) activeRoomCodeRef.current = initialRoom.code;
     setPlayerId(pid);
     if (initialRoom) {
       const me = initialRoom.players.find((p) => p.id === pid);

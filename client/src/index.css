@@ -1227,8 +1227,8 @@ body.teams-theme-dark .teams-context-banner {
   max-height: min(58vh, 480px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
   line-height: 1.65;
   padding: 0;
 }
