@@ -387,7 +387,7 @@ body.teams-theme-dark .teams-context-banner {
   color: var(--brand-teal);
 }
 
-.teams-account-btn {
+.account-circle-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -402,8 +402,12 @@ body.teams-theme-dark .teams-context-banner {
   flex-shrink: 0;
 }
 
-.teams-account-btn:hover {
+.account-circle-btn:hover {
   filter: brightness(0.95);
+}
+
+.account-circle-btn--guest {
+  background: var(--gray-500);
 }
 
 .help-coachmark-layer {

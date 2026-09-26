@@ -10,7 +10,6 @@ import {
   readSession,
   onReconnect,
   onChatUpdate,
-  isGuestMode,
 } from './api';
 import {
   confirmOAuthHelpHintIfPending,
@@ -330,7 +329,6 @@ export default function App() {
   }
 
   const isHost = room.myPlayerId === room.hostId;
-  const guest = isGuestMode();
 
   return (
     <div className={`app${teamsEmbed ? ' app--teams' : ''}`}>
@@ -342,7 +340,7 @@ export default function App() {
         <div className="app-header-right">
           <HeaderHelpButton onClick={() => setShowHowToPlay(true)} />
           <button type="button" className="exit-btn" onClick={() => isHost ? setShowExitConfirm(true) : handleExit()}>
-            {guest || teamsEmbed ? 'Exit' : isHost ? 'Exit Game' : 'Leave'}
+            {isHost ? 'Exit Game' : 'Leave'}
           </button>
           <HeaderAuth />
         </div>

@@ -1,4 +1,5 @@
-import { UserButton, useClerk, useUser } from '@clerk/clerk-react';
+import { useClerk, useUser } from '@clerk/clerk-react';
+import { SignOutUserButton } from './SignOutUserButton';
 import { readTeamsClerkLatch } from '../teams/teamsSessionLatch';
 import { teamsHomeWithSignedOut } from '../teams/teamsManualAuth';
 
@@ -10,7 +11,7 @@ export function TeamsAccountButton() {
   const afterSignOutUrl = teamsHomeWithSignedOut();
 
   if (isLoaded && user) {
-    return <UserButton afterSignOutUrl={afterSignOutUrl} />;
+    return <SignOutUserButton afterSignOutUrl={afterSignOutUrl} />;
   }
 
   if (!latch) {
@@ -23,7 +24,7 @@ export function TeamsAccountButton() {
   return (
     <button
       type="button"
-      className="teams-account-btn"
+      className="account-circle-btn"
       aria-label="Account and sign out"
       title={latch.email ?? 'Signed in'}
       onClick={() => {
