@@ -57,6 +57,9 @@ export async function createLicenseCheckoutSession(
         quantity: qty,
       },
     ],
+    payment_intent_data: {
+      statement_descriptor_suffix: 'INGROUPS LIC',
+    },
     metadata: {
       orderId,
       buyerClerkId,
