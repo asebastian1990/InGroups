@@ -26,7 +26,12 @@ import {
   latchTeamsClerkSession,
   readTeamsClerkLatch,
 } from './teamsSessionLatch';
-import { waitForClerkToken } from './waitForClerkToken';
+import { waitForClerkToken } from '../auth/waitForClerkToken';
+import { runTeamsTicketSso } from './runTeamsTicketSso';
+import {
+  registerTeamsAuthLostHandler,
+  registerTeamsAuthRecovery,
+} from './teamsAuthRecovery';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
 
@@ -88,13 +93,18 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   }, []);
 
   const ensureClerkSessionConfigured = useCallback(async (waitForSession = false) => {
-    if (clerkSessionConfiguredRef.current && isClerkAuthConfigured()) return true;
-    if (clerkSessionConfiguredRef.current && !isClerkAuthConfigured()) {
+    const attempts = waitForSession ? 25 : 3;
+    const delayMs = waitForSession ? 200 : 50;
+
+    if (clerkSessionConfiguredRef.current && isClerkAuthConfigured()) {
+      const valid = await waitForClerkToken(() => getTokenRef.current(), 2, 50);
+      if (valid) return true;
+      clerkSessionConfiguredRef.current = false;
+    } else if (clerkSessionConfiguredRef.current) {
       clerkSessionConfiguredRef.current = false;
     }
-    const token = waitForSession
-      ? await waitForClerkToken(() => getTokenRef.current())
-      : await waitForClerkToken(() => getTokenRef.current(), 3, 50);
+
+    const token = await waitForClerkToken(() => getTokenRef.current(), attempts, delayMs);
     if (!token) return false;
     clerkSessionConfiguredRef.current = true;
     markClerkUiEnabled();
@@ -167,6 +177,49 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       markClerkUiDisabled();
     }
   }, [markClerkUiDisabled]);
+
+  useEffect(() => {
+    registerTeamsAuthRecovery(async () => {
+      if (!clerkUiEnabledRef.current && !readTeamsClerkLatch()) {
+        return false;
+      }
+      const result = await runTeamsTicketSso();
+      if (!result.ok) return false;
+
+      teamsSsoSessionRef.current = { signedInEmail: result.email };
+      clerkSessionConfiguredRef.current = false;
+      const token = await waitForClerkToken(() => getTokenRef.current(), 25, 200);
+      if (!token) return false;
+
+      clerkSessionConfiguredRef.current = true;
+      markClerkUiEnabled(result.email);
+      configureAuth(() => getTokenRef.current());
+      await syncAuthenticatedUser(() => getTokenRef.current()).catch((err) => {
+        console.warn('Failed to sync account with server:', err);
+      });
+      setProfile((prev) => ({
+        ...prev,
+        signedInWithTeams: true,
+        signedInEmail: result.email ?? prev.signedInEmail,
+        displayName: result.displayName ?? prev.displayName ?? teamsCtxRef.current.displayName,
+      }));
+      return true;
+    });
+
+    registerTeamsAuthLostHandler(() => {
+      markClerkUiDisabled();
+      setProfile((prev) => ({
+        ...prev,
+        signedInWithTeams: false,
+        signedInEmail: null,
+      }));
+    });
+
+    return () => {
+      registerTeamsAuthRecovery(null);
+      registerTeamsAuthLostHandler(null);
+    };
+  }, [markClerkUiEnabled, markClerkUiDisabled]);
 
   useEffect(() => {
     if (isLoaded) return;
@@ -386,6 +439,16 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', refreshClerkSession);
     };
   }, [ready, ensureClerkSessionConfigured]);
+
+  useEffect(() => {
+    if (!ready || !clerkUiEnabled) return;
+
+    const id = window.setInterval(() => {
+      void ensureClerkSessionConfigured(true);
+    }, 45_000);
+
+    return () => window.clearInterval(id);
+  }, [ready, clerkUiEnabled, ensureClerkSessionConfigured]);
 
   const handleSsoComplete = useCallback(
     (result: TeamsSsoResult) => {

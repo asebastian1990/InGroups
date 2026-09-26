@@ -1,5 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 
+import { waitForClerkToken } from './auth/waitForClerkToken';
+import {
+  isTeamsAppPath,
+  notifyTeamsAuthLost,
+  recoverTeamsAuth,
+} from './teams/teamsAuthRecovery';
+
 import type {
   ClientRoomState,
   WordSet,
@@ -168,7 +175,6 @@ export function resetAuth() {
 }
 
 
-
 async function authPayload(): Promise<{ token?: string; guestId?: string }> {
 
   if (isGuestMode()) {
@@ -183,10 +189,19 @@ async function authPayload(): Promise<{ token?: string; guestId?: string }> {
 
   }
 
-  const token = await getTokenFn();
+  let token = await waitForClerkToken(getTokenFn, 3, 80);
+
+  if (!token && isTeamsAppPath()) {
+    const recovered = await recoverTeamsAuth();
+    if (recovered) {
+      token = await waitForClerkToken(getTokenFn, 15, 150);
+    }
+  }
 
   if (!token) {
-
+    if (isTeamsAppPath()) {
+      notifyTeamsAuthLost();
+    }
     throw new Error('Not signed in');
 
   }
