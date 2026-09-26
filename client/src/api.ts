@@ -102,6 +102,10 @@ export function exitGuestMode(): void {
 
 
 
+export function isClerkAuthConfigured(): boolean {
+  return getTokenFn !== null;
+}
+
 export function configureAuth(getToken: () => Promise<string | null>) {
 
   clearGuestMode();

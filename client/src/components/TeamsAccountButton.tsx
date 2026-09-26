@@ -1,23 +1,19 @@
 import { useClerk } from '@clerk/clerk-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTeamsClerkUi, useTeamsProfile } from '../teams/TeamsEmbedContext';
-import { clearTeamsClerkLatch, readTeamsClerkLatch } from '../teams/teamsSessionLatch';
+import { clearTeamsClerkLatch } from '../teams/teamsSessionLatch';
 import { markTeamsSignedOut, teamsHomeWithSignedOut } from '../teams/teamsManualAuth';
 
 /**
  * Teams iframe: native account circle (Clerk UserButton often renders empty after interaction).
- * Clerk still backs the session for API calls; this control only handles sign-out UX.
+ * Shown only after Clerk token + configureAuth succeeded (useTeamsClerkUi).
  */
 export function TeamsAccountButton() {
   const teamsClerkUi = useTeamsClerkUi();
   const teamsProfile = useTeamsProfile();
-  const latch = readTeamsClerkLatch();
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  const signedIn =
-    teamsClerkUi || latch !== null || teamsProfile.signedInWithTeams;
 
   useEffect(() => {
     if (!open) return;
@@ -37,11 +33,11 @@ export function TeamsAccountButton() {
     };
   }, [open]);
 
-  if (!signedIn) {
+  if (!teamsClerkUi || !teamsProfile.signedInWithTeams) {
     return null;
   }
 
-  const email = latch?.email ?? teamsProfile.signedInEmail;
+  const email = teamsProfile.signedInEmail;
   const label = email?.split('@')[0] ?? teamsProfile.displayName?.trim() ?? 'Account';
   const initial = (label[0] ?? 'A').toUpperCase();
 
