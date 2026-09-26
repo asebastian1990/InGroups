@@ -282,6 +282,8 @@ This sets:
 
 Upload `teams-app/ingroups-teams.zip` to **Teams Admin Center** (org catalog; meeting upload if used). Increment `"version"` for every re-upload.
 
+**Manifest formatting note:** For **custom org apps**, Teams Admin Center often shows `description.full` as one paragraph (newlines and Markdown bullets are not rendered). That is a Microsoft limitation, not a packaging error. Use `\n\n` and numbered sections in the manifest anyway — some Teams client views (e.g. app overview) respect line breaks. When you submit to the **Teams Store**, use the same copy in Partner Center (their editor may render Markdown). Do not rely on Admin Center as a WYSIWYG preview of the long description.
+
 ---
 
 
