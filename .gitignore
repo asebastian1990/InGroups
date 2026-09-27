@@ -7,3 +7,7 @@ _extract/
 shared/*.js
 teams-app/manifest.json
 teams-app/ingroups-teams.zip
+teams-app/.venv-docgen/
+teams-app/~$*
+teams-app/*.ttf
+teams-app/outline-preview-nearest.png

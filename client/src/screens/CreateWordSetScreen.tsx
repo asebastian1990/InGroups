@@ -17,16 +17,21 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editing, setEditing] = useState<WordSet | null>(editSet ?? null);
+  const [creatingNew, setCreatingNew] = useState(false);
 
   useEffect(() => {
     if (guest) return;
     Promise.all([getLicense(), getWordSets()])
       .then(([license, sets]) => {
         setHasLicense(!!license);
-        setCustomSets(sets.filter((s) => s.isCustom));
+        const custom = sets.filter((s) => s.isCustom);
+        setCustomSets(custom);
+        if (custom.length === 0 && !editSet) {
+          setCreatingNew(true);
+        }
       })
       .catch(() => {});
-  }, [guest]);
+  }, [guest, editSet]);
 
   const parseWords = (text: string): string[] => {
     return text
@@ -45,6 +50,7 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
     if (result.success) {
       setSuccess('Word set saved!');
       setError('');
+      setCreatingNew(false);
       getWordSets().then((sets) => setCustomSets(sets.filter((s) => s.isCustom)));
     } else {
       setError(result.error ?? 'Failed to save');
@@ -56,6 +62,7 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
     const result = await deleteWordSet(editing.id);
     if (result.success) {
       setEditing(null);
+      setCreatingNew(false);
       setName('');
       setWordsText('');
       getWordSets().then((sets) => setCustomSets(sets.filter((s) => s.isCustom)));
@@ -63,15 +70,21 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
   };
 
   const handleEditExisting = (set: WordSet) => {
+    setCreatingNew(false);
     setEditing(set);
     setName(set.name);
     setWordsText(set.words.join('\n'));
+    setError('');
+    setSuccess('');
   };
 
   const handleCreateNew = () => {
     setEditing(null);
+    setCreatingNew(true);
     setName('');
     setWordsText('');
+    setError('');
+    setSuccess('');
   };
 
   if (guest) {
@@ -108,7 +121,7 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
       <button className="back-link" onClick={onBack}>← Back</button>
       <h2 style={{ fontSize: '1.2rem', marginBottom: 16 }}>Create Word Set</h2>
 
-      {customSets.length > 0 && !editing && (
+      {customSets.length > 0 && !editing && !creatingNew && (
         <>
           <p className="section-label">Your Sets</p>
           <ul className="word-set-list">
@@ -124,7 +137,7 @@ export function CreateWordSetScreen({ onBack, onGetLicense, editSet }: Props) {
         </>
       )}
 
-      {(editing || customSets.length === 0) && (
+      {(editing || creatingNew || customSets.length === 0) && (
         <>
           <label className="input-label">Set Name</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="New Set 1" />

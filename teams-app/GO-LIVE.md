@@ -79,6 +79,7 @@ Docs: [Create Partner Center account](https://learn.microsoft.com/en-us/microsof
 - [ ] Read [Teams Store validation guidelines](https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/appsource/prepare/teams-store-validation-guidelines) and [submission checklist](https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/appsource/prepare/submission-checklist)
 - [ ] Partner Center → **New offer** → Teams app → upload `.zip`
 - [ ] Listing metadata must **match manifest exactly** (name, developer, privacy, terms, icons, description)
+- [ ] **Test instructions document** — edit and attach `teams-app/TEAMS-STORE-TEST-INSTRUCTIONS.docx` (regenerate with `teams-app/.venv-docgen/bin/python teams-app/generate-test-instructions-doc.py` after changing the generator)
 - [ ] **Test accounts** for Microsoft validation team:
   - Admin + non-admin (e.g. `tester1`-style accounts in a test tenant, or sign-up instructions if self-serve)
   - One account with **active license** (premium word sets)

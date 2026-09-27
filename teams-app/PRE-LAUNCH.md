@@ -6,6 +6,34 @@ See also: [GO-LIVE.md](./GO-LIVE.md) (Store checklist), [AZURE-SSO-SETUP.md](./A
 
 ---
 
+## Latest update — 9/26/26
+
+**Where we are:** Infrastructure and auth cutover for production subdomain are largely complete. Web (Google + email), Teams SSO, Stripe live checkout, legal pages, and production manifest packaging have been exercised on `ingroups.annaliese-sebastian.com`.
+
+| Area | Status |
+|------|--------|
+| Step 1 — Cloudflare subdomain | Done |
+| Step 2 — Railway env (`CORS_ORIGIN`, `APP_URL`, `TEAMS_AAD_APP_URI`) | Done |
+| Step 3 — Azure Entra / Teams SSO URI | Done |
+| Step 4 — Clerk Production (4a–4h, **not** 4e-b brand verification) | Done |
+| Step 5 — Legal pages on subdomain | Done |
+| Step 6 — Manifest + package + org upload | Done |
+| Step 7 — Partner Center Store listing | **Next** |
+| Stripe statement suffix `INGROUPS LIC` | Done (API deploy) |
+| Teams auth (Clerk in iframe + token recovery) | Stabilized in client |
+
+**Deferred (not blocking sign-in):** [Step 4e-b — Google brand verification](#4e-b--google-brand-verification-later--not-blocking-sign-in) (consent-screen branding; optional before Store marketing).
+
+**Railway “production”:** See [Railway before Store submit?](#railway-before-store-submit) below — upgrade/no-sleep is recommended before Microsoft validation, even if the app already works on the current URL.
+
+**Next actions:**
+
+1. Confirm Railway is on a **paid plan** with **sleep disabled** (or accept validation risk on trial).
+2. Start [Step 7 — Partner Center](#step-7--partner-center-store-listing) (account → publisher verification → new Teams offer).
+3. When ready for polish: Google brand verification (4e-b).
+
+---
+
 ## Production URLs (target state)
 
 
@@ -290,13 +318,53 @@ Upload `teams-app/ingroups-teams.zip` to **Teams Admin Center** (org catalog; me
 
 ## Step 7 — Partner Center (Store listing)
 
+Publishing to the **Teams Store** is separate from uploading the zip in **Teams Admin Center** (org catalog). External customers discover the app through Partner Center after Microsoft approves the offer.
+
+### How to start Step 7
+
+1. **Partner Center account** — [partner.microsoft.com](https://partner.microsoft.com) → sign in with a work account tied to **Annaliese Sebastian LLC** (or enroll the company). Complete legal profile and tax/payout if prompted.  
+   Docs: [Create a Partner Center developer account](https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/appsource/prepare/create-partner-center-dev-account).
+
+2. **Publisher verification** (start early; often several days) — Partner Center will ask to verify identity/employment for the publisher. Finish **Publisher attestation** for Teams apps when offered (annual requirement).
+
+3. **Validate the package** — [Teams Developer Portal](https://dev.teams.microsoft.com) → your app → validate manifest / fix errors before upload.
+
+4. **Create the Store offer** — Partner Center → **Marketplace offers** → **+ New offer** → **Teams app** (wording may vary). Link or upload the same app identity as Developer Portal.
+
+5. **Upload** `teams-app/ingroups-teams.zip` (production URLs only in `validDomains`; version bumped from Step 6).
+
+6. **Listing metadata** — Must **match the manifest** (name, developer, icons, descriptions, privacy/terms URLs). Add **screenshots**, **support contact** (email or URL), and **validation notes**:
+   - Test accounts (admin + player; one with an **active license**).
+   - Steps: open tab → Teams SSO → host/join → license purchase (web/Teams) → meeting side panel if you claim it.
+   - Test on **Teams desktop + web**.
+
+7. **Submit for review** — Respond to Microsoft (`subm@microsoft.com` / Partner Center messages) until approved. Plan for **1–3+ weeks** and possible resubmits.
+
+See [GO-LIVE.md](./GO-LIVE.md) Phases 5–6 for the full checklist.
+
+### URLs to reuse everywhere
+
 When filling the listing, use the **same URLs as the manifest**:
 
 - Privacy → `https://ingroups.annaliese-sebastian.com/privacypolicy`
 - Terms → `https://ingroups.annaliese-sebastian.com/termsofuse`
-- Website / support → subdomain root or a support page on the subdomain
+- Website / support → `https://ingroups.annaliese-sebastian.com` or a dedicated support email listed in Partner Center
 
 Microsoft checks that listing metadata matches the manifest.
+
+---
+
+## Railway before Store submit?
+
+**Short answer:** You do **not** need a custom API domain (`api.ingroups…`) to launch, but you **should** treat Railway as production before Store submission.
+
+| Question | Guidance |
+|----------|----------|
+| Is `ingroups-production.up.railway.app` OK? | **Yes** — already used in manifest `validDomains` and `VITE_SERVER_URL`. |
+| Is Railway “production” required? | **Strongly recommended** before Microsoft validation: **paid plan**, **no sleep**, stable service. Trial/sleeping hosts can fail review or frustrate real users. |
+| Custom domain on Railway? | **Optional** later — update `CORS_ORIGIN`, client `VITE_SERVER_URL`, manifest `validDomains`, and Stripe/Clerk URLs if you move the API. |
+
+**Checklist:** Railway dashboard → production service → **Settings** → disable sleep / use Hobby or Pro as needed → confirm `/api/health` stays up after idle periods.
 
 ---
 
