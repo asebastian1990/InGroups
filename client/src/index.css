@@ -1209,6 +1209,7 @@ body.teams-theme-dark .teams-context-banner {
 
 .modal:has(.how-to-play-carousel) {
   max-width: min(480px, calc(100vw - 40px));
+  height: min(85vh, 640px);
   max-height: min(85vh, 640px);
   width: 100%;
   display: flex;
@@ -1270,7 +1271,7 @@ body.teams-theme-dark .teams-context-banner {
   position: relative;
   width: 100%;
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1310,9 +1311,8 @@ body.teams-theme-dark .teams-context-banner {
 .how-to-play-card {
   box-sizing: border-box;
   width: 100%;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
-  max-height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   font-family: var(--font-serif);
