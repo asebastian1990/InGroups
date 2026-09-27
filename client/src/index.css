@@ -1912,6 +1912,14 @@ textarea.input {
   overflow: hidden;
 }
 
+/* Web: chat aligns to the centered 380px column. Teams side panel: app is full width. */
+.app--teams .chat-layer {
+  left: 0;
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+}
+
 .chat-drawer {
   position: absolute;
   inset: 0;
