@@ -2,7 +2,7 @@
 
 **Annaliese Sebastian LLC** · [contact@annaliese-sebastian.com](mailto:contact@annaliese-sebastian.com)
 
-InGroups is developed and supported by a small, independent team on a part-time basis. We review support requests in the order they are received and work to respond as promptly as we can; please allow **up to seven (7) calendar days** for a reply.
+InGroups is developed and supported by a small, independent team on a part-time basis. We do our best to respond as promptly as we can, but please allow **up to seven (7) calendar days** for a reply.
 
 When you contact us, include your organization name (if applicable), whether you use **Microsoft Teams** or the **web app**, and a brief description of the issue. Screenshots and room codes (for gameplay issues) are helpful.
 
@@ -16,10 +16,12 @@ When you contact us, include your organization name (if applicable), whether you
 
 ## Where to open InGroups
 
-| Surface | URL | Notes |
-| --- | --- | --- |
-| **Web app** | [https://ingroups.annaliese-sebastian.com](https://ingroups.annaliese-sebastian.com) | Sign in with email or Google, or choose **Continue as Guest** for basic play. |
+
+| Surface             | URL                                                                                              | Notes                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web app**         | [https://ingroups.annaliese-sebastian.com](https://ingroups.annaliese-sebastian.com)             | Sign in with email or Google, or choose **Continue as Guest** for basic play.                                                          |
 | **Microsoft Teams** | [https://ingroups.annaliese-sebastian.com/teams](https://ingroups.annaliese-sebastian.com/teams) | Opened inside Teams. Most users are signed in automatically via **Microsoft Teams SSO**; a guest path is available if SSO is not used. |
+
 
 This support page is always available without signing in. Using the game itself may require sign-in, a Teams session, or guest access depending on how you open InGroups.
 
@@ -54,8 +56,6 @@ If users cannot find or open InGroups:
 
 - Review **Teams app permission policies** and **org-wide app settings** to ensure the app (or the class of apps you use for InGroups) is allowed.
 - The first use of **Microsoft sign-in / SSO** in a tenant may require an administrator to **grant consent** for the application, which is normal for multitenant Microsoft Entra ID apps.
-
-For policy-specific guidance, contact us at [contact@annaliese-sebastian.com](mailto:contact@annaliese-sebastian.com) with your tenant name and a description of what users see.
 
 ---
 
@@ -131,11 +131,13 @@ One license applies to one account. You may share unused license keys with other
 
 ## Troubleshooting
 
-| Issue | What to try |
-| --- | --- |
-| **Cannot sign in (Teams)** | Sign out in the app, retry SSO, or use guest/manual sign-in. Confirm your admin has allowed the app and completed consent if required. |
-| **Blank tab or load failure** | Confirm network access to `ingroups.annaliese-sebastian.com`, try Teams desktop, and retry after a few minutes. |
-| **Premium features locked** | Sign in with an account that has an active license, or activate a key on the License page. |
+
+| Issue                         | What to try                                                                                                                            |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cannot sign in (Teams)**    | Sign out in the app, retry SSO, or use guest/manual sign-in. Confirm your admin has allowed the app and completed consent if required. |
+| **Blank tab or load failure** | Confirm network access to `ingroups.annaliese-sebastian.com`, try Teams desktop, and retry after a few minutes.                        |
+| **Premium features locked**   | Sign in with an account that has an active license, or activate a key on the License page.                                             |
+
 
 For anything not covered here, email [contact@annaliese-sebastian.com](mailto:contact@annaliese-sebastian.com).
 
@@ -145,3 +147,4 @@ For anything not covered here, email [contact@annaliese-sebastian.com](mailto:co
 
 - [Privacy Policy](/privacypolicy)
 - [Terms of Use](/termsofuse)
+
