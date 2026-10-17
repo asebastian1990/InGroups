@@ -137,6 +137,8 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
       </div>
 
       <nav className="landing-legal-links" aria-label="Legal">
+        <a href="/support">Support</a>
+        <span aria-hidden="true">·</span>
         <a href="/privacypolicy">Privacy Policy</a>
         <span aria-hidden="true">·</span>
         <a href="/termsofuse">Terms of Use</a>

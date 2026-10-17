@@ -7,10 +7,54 @@ interface Props {
   document: LegalDocument;
 }
 
-export function LegalDocumentScreen({ document }: Props) {
+function LegalDocumentFooter({ document }: { document: LegalDocument }) {
+  if (document.id === 'support') {
+    return (
+      <footer className="legal-footer">
+        <a href={legalDocuments.privacy.path} className="legal-footer-link">
+          {legalDocuments.privacy.title}
+        </a>
+        <span className="legal-footer-sep" aria-hidden="true">
+          ·
+        </span>
+        <a href={legalDocuments.terms.path} className="legal-footer-link">
+          {legalDocuments.terms.title}
+        </a>
+        <span className="legal-footer-sep" aria-hidden="true">
+          ·
+        </span>
+        <a href="/sign-in" className="legal-footer-link">
+          Sign in to InGroups
+        </a>
+      </footer>
+    );
+  }
+
   const other =
     document.id === 'privacy' ? legalDocuments.terms : legalDocuments.privacy;
 
+  return (
+    <footer className="legal-footer">
+      <a href={other.path} className="legal-footer-link">
+        {other.title}
+      </a>
+      <span className="legal-footer-sep" aria-hidden="true">
+        ·
+      </span>
+      <a href={legalDocuments.support.path} className="legal-footer-link">
+        {legalDocuments.support.title}
+      </a>
+      <span className="legal-footer-sep" aria-hidden="true">
+        ·
+      </span>
+      <a href="/" className="legal-footer-link">
+        Back to InGroups
+      </a>
+    </footer>
+  );
+}
+
+export function LegalDocumentScreen({ document }: Props) {
   return (
     <div className="app app--legal">
       <header className="legal-header">
@@ -28,17 +72,7 @@ export function LegalDocumentScreen({ document }: Props) {
 
         <article className="legal-doc">{parseLegalMarkdown(document.markdown)}</article>
 
-        <footer className="legal-footer">
-          <a href={other.path} className="legal-footer-link">
-            {other.title}
-          </a>
-          <span className="legal-footer-sep" aria-hidden="true">
-            ·
-          </span>
-          <a href="/" className="legal-footer-link">
-            Back to InGroups
-          </a>
-        </footer>
+        <LegalDocumentFooter document={document} />
       </main>
     </div>
   );
