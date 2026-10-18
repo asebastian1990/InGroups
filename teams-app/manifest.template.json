@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
   "manifestVersion": "1.25",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "id": "f8e3b2a1-4c5d-6e7f-8901-234567890abc",
   "supportsChannelFeatures": "tier1",
   "developer": {
@@ -75,5 +75,6 @@
     "accounts.YOUR-ROOT-DOMAIN",
     "clerk.com"
   ],
-  "isFullScreen": false
+  "isFullScreen": false,
+  "showLoadingIndicator": true
 }
