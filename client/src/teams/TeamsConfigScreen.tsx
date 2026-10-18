@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { app, pages } from '@microsoft/teams-js';
+import { notifyTeamsContentSuccess } from './teamsNativeLoading';
 
 export function TeamsConfigScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export function TeamsConfigScreen() {
         });
 
         pages.config.setValidityState(true);
+        notifyTeamsContentSuccess();
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to initialize Teams config.');

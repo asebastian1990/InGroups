@@ -32,6 +32,7 @@ import {
   registerTeamsAuthLostHandler,
   registerTeamsAuthRecovery,
 } from './teamsAuthRecovery';
+import { notifyTeamsContentSuccess } from './teamsNativeLoading';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
 
@@ -141,6 +142,9 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     });
     readyLatchRef.current = true;
     setReady(true);
+    if (nextProfile.inTeams || teamsCtxRef.current.inTeams) {
+      notifyTeamsContentSuccess();
+    }
   }, []);
 
   const beginSsoRetry = useCallback(() => {

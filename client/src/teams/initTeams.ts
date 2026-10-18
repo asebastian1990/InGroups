@@ -1,6 +1,7 @@
 import { app } from '@microsoft/teams-js';
 import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
+import { notifyTeamsContentFailure } from './teamsNativeLoading';
 
 function applyTeamsTheme(theme?: string): void {
   document.body.classList.remove('teams-theme-dark', 'teams-theme-contrast');
@@ -34,7 +35,9 @@ export async function initTeamsClient(): Promise<TeamsProfile> {
       applyTeamsTheme(theme);
     });
     return profileFromContext(ctx);
-  } catch {
+  } catch (err) {
+    console.warn('[teams] app.initialize failed:', err);
+    notifyTeamsContentFailure('Failed to initialize InGroups in Microsoft Teams.');
     return { ...defaultTeamsProfile };
   }
 }
