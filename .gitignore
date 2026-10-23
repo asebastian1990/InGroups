@@ -9,6 +9,8 @@ teams-app/manifest.json
 teams-app/ingroups-teams.zip
 # Local-only Teams Store validation tracker (not shipped in zip)
 teams-app/MICROSOFT-FEEDBACK.md
+# Local-only Railway incident rotation notes (secrets / ops — never publish)
+teams-app/RAILWAY-SECURITY-ROTATION-CHECKLIST.md
 teams-app/.venv-docgen/
 teams-app/~$*
 teams-app/*.ttf
