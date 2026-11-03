@@ -25,3 +25,13 @@ export function isBlockedMicrosoft365Host(hostName: string | null | undefined): 
   }
   return !TEAMS_PRODUCT_HOSTS.has(normalized);
 }
+
+/**
+ * M365 app (m365.cloud.microsoft) reports TeamsJS host `office`.
+ * `app.openLink` often resolves without opening a tab there; use sync browser navigation on click.
+ */
+export function prefersBrowserNavigationForExternalLinks(
+  hostName: string | null | undefined
+): boolean {
+  return normalizeTeamsHostName(hostName) === 'office';
+}

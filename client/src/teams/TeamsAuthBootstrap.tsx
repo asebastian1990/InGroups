@@ -500,7 +500,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   };
 
   if (unsupportedHost) {
-    return <TeamsUnsupportedHostScreen />;
+    return <TeamsUnsupportedHostScreen hostName={profile.hostName} />;
   }
 
   if (!ready && !readyLatchRef.current) {

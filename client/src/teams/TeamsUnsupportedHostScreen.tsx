@@ -5,14 +5,18 @@ import { notifyTeamsContentSuccess } from './teamsNativeLoading';
 
 const TEAMS_WEB_URL = 'https://teams.microsoft.com/';
 
-export function TeamsUnsupportedHostScreen() {
+type TeamsUnsupportedHostScreenProps = {
+  hostName?: string | null;
+};
+
+export function TeamsUnsupportedHostScreen({ hostName = null }: TeamsUnsupportedHostScreenProps) {
   useEffect(() => {
     notifyTeamsContentSuccess();
   }, []);
 
   const openTeamsWeb = useCallback(() => {
-    void openExternalLink(TEAMS_WEB_URL);
-  }, []);
+    void openExternalLink(TEAMS_WEB_URL, { hostName });
+  }, [hostName]);
 
   return (
     <div className="app app--teams">
