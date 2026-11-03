@@ -2508,3 +2508,133 @@ body.teams-theme-dark .legal-footer-link {
 body.teams-theme-dark .legal-footer-link:hover {
   color: var(--brand-teal);
 }
+
+/* How to Play modal + coachmark */
+body.teams-theme-dark .how-to-play-footer {
+  border-color: #444;
+}
+
+body.teams-theme-dark .how-to-play-progress {
+  color: #bbb;
+}
+
+body.teams-theme-dark .how-to-play-nav--prev::before {
+  border-right-color: #d8d8d8;
+}
+
+body.teams-theme-dark .how-to-play-nav--next::before {
+  border-left-color: #d8d8d8;
+}
+
+body.teams-theme-dark .how-to-play-nav--prev:hover::before {
+  border-right-color: #fff;
+}
+
+body.teams-theme-dark .how-to-play-nav--next:hover::before {
+  border-left-color: #fff;
+}
+
+body.teams-theme-dark .how-to-play-scroll-shell::before {
+  background: linear-gradient(to bottom, rgba(42, 42, 42, 0.98), transparent);
+}
+
+body.teams-theme-dark .how-to-play-scroll-shell::after {
+  background: linear-gradient(to top, rgba(42, 42, 42, 0.98), transparent);
+}
+
+body.teams-theme-dark .help-coachmark-arrow {
+  border-bottom-color: #e0e0e0;
+}
+
+body.teams-theme-dark .help-coachmark-label {
+  color: #f5f5f5;
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+body.teams-theme-dark .header-help-btn {
+  background: #333;
+  border-color: #666;
+  color: #ccc;
+}
+
+body.teams-theme-dark .header-help-btn:hover {
+  border-color: var(--brand-teal);
+  color: #7ecfc4;
+}
+
+/* Header / menus / misc surfaces */
+body.teams-theme-dark .exit-btn {
+  color: #aaa;
+}
+
+body.teams-theme-dark .exit-btn:hover {
+  color: #f4a0a8;
+}
+
+body.teams-theme-dark .muted {
+  color: #aaa;
+}
+
+body.teams-theme-dark .closed-banner {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #bbb;
+}
+
+body.teams-theme-dark .account-menu-popup {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+body.teams-theme-dark .account-menu-item {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .account-menu-item:hover {
+  background: #333;
+}
+
+body.teams-theme-dark .confirm-text {
+  color: #ccc;
+}
+
+body.teams-theme-dark .shop-lead,
+body.teams-theme-dark .shop-total,
+body.teams-theme-dark .shop-price-row {
+  color: #ccc;
+}
+
+body.teams-theme-dark .shop-price-value {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .guest-auth {
+  border-color: #444;
+}
+
+body.teams-theme-dark .auth-divider {
+  color: #777;
+}
+
+body.teams-theme-dark .auth-divider::before,
+body.teams-theme-dark .auth-divider::after {
+  background: #444;
+}
+
+body.teams-theme-dark .auth-form-title {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .speed-bonus-help-list {
+  color: #ccc;
+}
+
+body.teams-theme-dark .legal-doc-disclaimer {
+  color: #999;
+}
+
+body.teams-theme-dark .legal-updated {
+  color: #888;
+}
