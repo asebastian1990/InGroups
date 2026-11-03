@@ -2665,14 +2665,6 @@ body.teams-theme-dark .legal-updated {
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--gray-600);
-  margin-bottom: 12px;
-}
-
-.teams-host-gate-note {
-  font-family: var(--font-sans);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--gray-400);
   margin-bottom: 24px;
 }
 
@@ -2689,8 +2681,4 @@ body.teams-theme-dark .teams-host-gate-title {
 
 body.teams-theme-dark .teams-host-gate-lead {
   color: #bbb;
-}
-
-body.teams-theme-dark .teams-host-gate-note {
-  color: #888;
 }
