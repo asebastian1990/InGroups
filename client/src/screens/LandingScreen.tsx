@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Logo } from '../components/Logo';
 import { createRoom, joinRoom, isGuestMode } from '../api';
+import { legalDocumentHref, legalDocuments } from '../legal/legalDocuments';
 import { useTeamsEmbed, useTeamsProfile } from '../teams/TeamsEmbedContext';
 import type { ClientRoomState } from '@shared/types';
 
@@ -137,11 +138,17 @@ export function LandingScreen({ onEnter, onNavigate }: Props) {
       </div>
 
       <nav className="landing-legal-links" aria-label="Legal">
-        <a href="/support">Support</a>
+        <a href={legalDocumentHref(legalDocuments.support.path, teamsEmbed)}>
+          Support
+        </a>
         <span aria-hidden="true">·</span>
-        <a href="/privacypolicy">Privacy Policy</a>
+        <a href={legalDocumentHref(legalDocuments.privacy.path, teamsEmbed)}>
+          Privacy Policy
+        </a>
         <span aria-hidden="true">·</span>
-        <a href="/termsofuse">Terms of Use</a>
+        <a href={legalDocumentHref(legalDocuments.terms.path, teamsEmbed)}>
+          Terms of Use
+        </a>
       </nav>
     </div>
   );

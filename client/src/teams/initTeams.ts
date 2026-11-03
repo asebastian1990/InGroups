@@ -2,6 +2,7 @@ import { app } from '@microsoft/teams-js';
 import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
 import { notifyTeamsContentFailure } from './teamsNativeLoading';
+import { persistTeamsThemeSnapshot } from './teamsThemePersist';
 
 /** In-meeting surfaces must stay dark even when Teams reports theme "default". */
 const MEETING_FRAME_CONTEXTS = new Set([
@@ -39,6 +40,7 @@ function applyTeamsTheme(theme?: string): void {
   if (forceMeetingDarkTheme || theme === 'dark') {
     document.body.classList.add('teams-theme-dark');
   }
+  persistTeamsThemeSnapshot();
 }
 
 function profileFromContext(ctx: Awaited<ReturnType<typeof app.getContext>>): TeamsProfile {

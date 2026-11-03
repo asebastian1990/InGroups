@@ -37,10 +37,31 @@ export const legalDocuments: Record<LegalDocumentId, LegalDocument> = {
   },
 };
 
+function normalizeLegalPath(path: string): string {
+  let normalized = path.replace(/\/+$/, '') || '/';
+  if (normalized.startsWith('/teams/')) {
+    normalized = normalized.slice('/teams'.length) || '/';
+  }
+  return normalized;
+}
+
 export function legalDocumentFromPath(path: string): LegalDocument | null {
-  const normalized = path.replace(/\/+$/, '') || '/';
+  const normalized = normalizeLegalPath(path);
   if (normalized === '/privacypolicy') return legalDocuments.privacy;
   if (normalized === '/termsofuse') return legalDocuments.terms;
   if (normalized === '/support') return legalDocuments.support;
   return null;
+}
+
+export function isTeamsLegalRoute(path: string): boolean {
+  const normalized = path.replace(/\/+$/, '') || '/';
+  return normalized.startsWith('/teams/') && legalDocumentFromPath(normalized) !== null;
+}
+
+export function legalDocumentHref(webPath: LegalDocument['path'], teamsEmbed: boolean): string {
+  return teamsEmbed ? `/teams${webPath}` : webPath;
+}
+
+export function ingroupsHomeHref(teamsEmbed: boolean): string {
+  return teamsEmbed ? '/teams' : '/';
 }

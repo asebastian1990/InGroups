@@ -7,7 +7,13 @@ import { TeamsProviders } from './teams/TeamsProviders.tsx';
 import { TeamsConfigScreen } from './teams/TeamsConfigScreen.tsx';
 import { PurchaseCompleteScreen } from './screens/PurchaseCompleteScreen.tsx';
 import { LegalDocumentScreen } from './screens/LegalDocumentScreen.tsx';
-import { legalDocumentFromPath } from './legal/legalDocuments.ts';
+import {
+  isTeamsLegalRoute,
+  legalDocumentFromPath,
+} from './legal/legalDocuments.ts';
+import { restoreTeamsThemeSnapshot } from './teams/teamsThemePersist.ts';
+
+restoreTeamsThemeSnapshot();
 
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const isTeamsConfig = path === '/teams/config';
@@ -18,9 +24,16 @@ const legalDocument = legalDocumentFromPath(path);
 const root = createRoot(document.getElementById('root')!);
 
 if (legalDocument) {
+  const teamsLegal = isTeamsLegalRoute(path);
   root.render(
     <StrictMode>
-      <LegalDocumentScreen document={legalDocument} />
+      {teamsLegal ? (
+        <TeamsProviders>
+          <LegalDocumentScreen document={legalDocument} teamsEmbed />
+        </TeamsProviders>
+      ) : (
+        <LegalDocumentScreen document={legalDocument} />
+      )}
     </StrictMode>,
   );
 } else if (isPurchaseComplete) {
