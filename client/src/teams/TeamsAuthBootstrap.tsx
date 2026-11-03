@@ -33,6 +33,8 @@ import {
   registerTeamsAuthRecovery,
 } from './teamsAuthRecovery';
 import { notifyTeamsContentSuccess } from './teamsNativeLoading';
+import { isBlockedMicrosoft365Host } from './teamsHost';
+import { TeamsUnsupportedHostScreen } from './TeamsUnsupportedHostScreen';
 
 const CLERK_LOAD_TIMEOUT_MS = 12_000;
 
@@ -124,6 +126,7 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
   const [guestChosen, setGuestChosen] = useState(false);
   const [clerkUiEnabled, setClerkUiEnabled] = useState(false);
   const [ssoPhase, setSsoPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [unsupportedHost, setUnsupportedHost] = useState(false);
 
   const finishReady = useCallback((nextProfile: TeamsProfile) => {
     setProfile((prev) => {
@@ -284,6 +287,11 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
       if (cancelled) return;
       teamsCtxRef.current = { ...defaultTeamsProfile, ...ctxProfile };
       setProfile(teamsCtxRef.current);
+      if (ctxProfile.inTeams && isBlockedMicrosoft365Host(ctxProfile.hostName)) {
+        setUnsupportedHost(true);
+        readyLatchRef.current = true;
+        setReady(true);
+      }
       setTeamsCtxReady(true);
     })();
 
@@ -490,6 +498,10 @@ export function TeamsAuthBootstrap({ children }: { children: ReactNode }) {
     readyLatchRef.current = false;
     window.location.replace(TEAMS_HOME);
   };
+
+  if (unsupportedHost) {
+    return <TeamsUnsupportedHostScreen />;
+  }
 
   if (!ready && !readyLatchRef.current) {
     return (

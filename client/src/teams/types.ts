@@ -1,5 +1,6 @@
 export interface TeamsProfile {
   inTeams: boolean;
+  hostName: string | null;
   displayName: string | null;
   loginHint: string | null;
   userId: string | null;
@@ -11,6 +12,7 @@ export interface TeamsProfile {
 
 export const defaultTeamsProfile: TeamsProfile = {
   inTeams: false,
+  hostName: null,
   displayName: null,
   loginHint: null,
   userId: null,

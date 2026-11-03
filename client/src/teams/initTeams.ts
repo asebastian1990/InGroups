@@ -46,6 +46,7 @@ function applyTeamsTheme(theme?: string): void {
 function profileFromContext(ctx: Awaited<ReturnType<typeof app.getContext>>): TeamsProfile {
   return {
     inTeams: true,
+    hostName: ctx.app?.host?.name ?? null,
     displayName: ctx.user?.displayName ?? null,
     loginHint: ctx.user?.loginHint ?? ctx.user?.userPrincipalName ?? null,
     userId: ctx.user?.id ?? null,
