@@ -3,12 +3,41 @@ import type { TeamsProfile } from './types';
 import { defaultTeamsProfile } from './types';
 import { notifyTeamsContentFailure } from './teamsNativeLoading';
 
+/** In-meeting surfaces must stay dark even when Teams reports theme "default". */
+const MEETING_FRAME_CONTEXTS = new Set([
+  'meetingSidePanel',
+  'meetingChatTab',
+  'meetingDetailsTab',
+  'meetingStage',
+]);
+
+let forceMeetingDarkTheme = false;
+
+function shouldForceMeetingDarkTheme(
+  ctx: Awaited<ReturnType<typeof app.getContext>>
+): boolean {
+  const frameContext = ctx.page?.frameContext;
+  if (frameContext && MEETING_FRAME_CONTEXTS.has(frameContext)) {
+    return true;
+  }
+  return Boolean(ctx.meeting?.id);
+}
+
 function applyTeamsTheme(theme?: string): void {
-  document.body.classList.remove('teams-theme-dark', 'teams-theme-contrast');
-  if (theme === 'dark') {
-    document.body.classList.add('teams-theme-dark');
-  } else if (theme === 'contrast') {
+  document.body.classList.remove(
+    'teams-theme-dark',
+    'teams-theme-contrast',
+    'teams-meeting-surface'
+  );
+  if (forceMeetingDarkTheme) {
+    document.body.classList.add('teams-meeting-surface');
+  }
+  if (theme === 'contrast') {
     document.body.classList.add('teams-theme-contrast');
+    return;
+  }
+  if (forceMeetingDarkTheme || theme === 'dark') {
+    document.body.classList.add('teams-theme-dark');
   }
 }
 
@@ -30,6 +59,7 @@ export async function initTeamsClient(): Promise<TeamsProfile> {
   try {
     await app.initialize();
     const ctx = await app.getContext();
+    forceMeetingDarkTheme = shouldForceMeetingDarkTheme(ctx);
     applyTeamsTheme(ctx.app.theme);
     app.registerOnThemeChangeHandler((theme) => {
       applyTeamsTheme(theme);

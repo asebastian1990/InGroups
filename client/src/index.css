@@ -2080,6 +2080,7 @@ textarea.input {
   margin: 0;
 }
 
+/* Teams dark theme — full surface (meeting side panel forces this when theme is default). */
 body.teams-theme-dark {
   background: #1f1f1f;
   color: #f5f5f5;
@@ -2090,15 +2091,363 @@ body.teams-theme-dark .app {
   color: #f5f5f5;
 }
 
-body.teams-theme-dark .app-header,
-body.teams-theme-dark .menu-item,
-body.teams-theme-dark .input,
-body.teams-theme-dark .word-set-view-btn {
+body.teams-theme-dark .teams-context-banner {
+  background: #2a2a2a;
+  color: #ccc;
   border-color: #444;
 }
 
-body.teams-theme-dark .input,
-body.teams-theme-dark .word-set-view-btn {
+body.teams-theme-dark .app-header {
+  border-color: #444;
+}
+
+body.teams-theme-dark .section-label,
+body.teams-theme-dark .section-chevron,
+body.teams-theme-dark .group-label,
+body.teams-theme-dark .room-code,
+body.teams-theme-dark .menu-item-arrow {
+  color: #999;
+}
+
+body.teams-theme-dark .section-header {
+  border-color: #444;
+}
+
+body.teams-theme-dark .menu-item {
+  border-color: #444;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .menu-item:hover {
+  color: #ccc;
+}
+
+body.teams-theme-dark .menu-item-value {
+  color: #e0e0e0;
+}
+
+body.teams-theme-dark .menu-item-outlined {
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+body.teams-theme-dark .btn {
   background: #2a2a2a;
   color: #f5f5f5;
+  border-color: #666;
+}
+
+body.teams-theme-dark .btn:hover {
+  background: #333;
+}
+
+body.teams-theme-dark .btn-primary {
+  background: #e8e8e8;
+  color: #1f1f1f;
+  border-color: #e8e8e8;
+}
+
+body.teams-theme-dark .btn-primary:hover {
+  background: #fff;
+  border-color: #fff;
+}
+
+body.teams-theme-dark .btn-danger {
+  border-color: var(--brand-red);
+  color: #f4a0a8;
+}
+
+body.teams-theme-dark .input,
+body.teams-theme-dark .select,
+body.teams-theme-dark textarea.input {
+  background: #2a2a2a;
+  color: #f5f5f5;
+  border-color: #555;
+}
+
+body.teams-theme-dark .input:focus,
+body.teams-theme-dark .select:focus {
+  border-color: #888;
+}
+
+body.teams-theme-dark .input-label {
+  color: #bbb;
+}
+
+body.teams-theme-dark .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+
+body.teams-theme-dark .number-input-compact {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+body.teams-theme-dark .number-input-compact .number-input-label {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .number-input button,
+body.teams-theme-dark .number-input-field {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .number-input button:hover {
+  background: #333;
+}
+
+body.teams-theme-dark .room-code-banner {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.teams-theme-dark .room-code-label {
+  color: #aaa;
+}
+
+body.teams-theme-dark .room-code-value,
+body.teams-theme-dark .room-code-display {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .win-condition-readonly,
+body.teams-theme-dark .landing p,
+body.teams-theme-dark .purchase-complete-lead {
+  color: #bbb;
+}
+
+body.teams-theme-dark .waiting-msg,
+body.teams-theme-dark .info-msg {
+  color: #aaa;
+}
+
+body.teams-theme-dark .error-msg {
+  color: #f4a0a8;
+}
+
+body.teams-theme-dark .player-item-selectable:hover {
+  background: #333;
+}
+
+body.teams-theme-dark .player-icon {
+  background: #444;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .player-guess {
+  color: #aaa;
+}
+
+body.teams-theme-dark .player-score {
+  color: #ccc;
+}
+
+body.teams-theme-dark .host-badge {
+  background: #444;
+  color: #e0e0e0;
+}
+
+body.teams-theme-dark .word-cell {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .word-cell:hover {
+  border-color: #888;
+}
+
+body.teams-theme-dark .word-cell.selected {
+  background: #e8e8e8;
+  color: #1f1f1f;
+  border-color: #e8e8e8;
+}
+
+body.teams-theme-dark .word-grid-disabled .word-cell {
+  background: #252525;
+  border-color: #3a3a3a;
+  color: #888;
+}
+
+body.teams-theme-dark .word-grid-disabled .word-cell.selected {
+  background: #555;
+  color: #f5f5f5;
+  border-color: #666;
+}
+
+body.teams-theme-dark .round-banner {
+  background: #2a2a2a;
+  border-left-color: #888;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .timer {
+  color: #bbb;
+}
+
+body.teams-theme-dark .speed-bonus-badge {
+  background: rgba(36, 107, 97, 0.35);
+  color: #7ecfc4;
+}
+
+body.teams-theme-dark .toggle-label {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .help-icon-btn {
+  background: #333;
+  border-color: #666;
+  color: #ccc;
+}
+
+body.teams-theme-dark .game-finished-banner.loser {
+  background: #2a2a2a;
+  color: #bbb;
+}
+
+body.teams-theme-dark .game-finished-banner.winner {
+  background: rgba(36, 107, 97, 0.25);
+  color: #7ecfc4;
+}
+
+body.teams-theme-dark .final-scoreboard-panel {
+  background: #2a2a2a;
+}
+
+body.teams-theme-dark .final-scoreboard-title {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .thoughtful-prompts {
+  background: #2a2a2a;
+}
+
+body.teams-theme-dark .thoughtful-prompts-text {
+  color: #bbb;
+}
+
+body.teams-theme-dark .modal {
+  background: #2a2a2a;
+  color: #f5f5f5;
+  border: 1px solid #444;
+}
+
+body.teams-theme-dark .modal-close {
+  color: #aaa;
+}
+
+body.teams-theme-dark .landing-section-divider,
+body.teams-theme-dark .landing-divider::before,
+body.teams-theme-dark .landing-divider::after {
+  background: #444;
+}
+
+body.teams-theme-dark .landing-legal-links a {
+  color: #aaa;
+}
+
+body.teams-theme-dark .landing-legal-links a:hover {
+  color: var(--brand-teal);
+}
+
+body.teams-theme-dark .landing-legal-links span,
+body.teams-theme-dark .legal-footer-sep {
+  color: #555;
+}
+
+body.teams-theme-dark .back-link {
+  color: #aaa;
+}
+
+body.teams-theme-dark .back-link:hover {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .tag {
+  border-color: #555;
+  color: #bbb;
+}
+
+body.teams-theme-dark .word-set-item {
+  border-color: #444;
+}
+
+body.teams-theme-dark .word-set-view-btn {
+  background: #333;
+  color: #f5f5f5;
+  border-color: #555;
+}
+
+body.teams-theme-dark .word-set-view-btn:hover {
+  background: #3a3a3a;
+}
+
+body.teams-theme-dark .word-set-item-locked {
+  color: #777;
+}
+
+body.teams-theme-dark .word-set-item-label-selectable:hover {
+  color: #ccc;
+}
+
+body.teams-theme-dark .chat-panel {
+  background: #1f1f1f;
+  border-color: #444;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .chat-panel-header {
+  border-color: #444;
+}
+
+body.teams-theme-dark .chat-tab {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .chat-tab:hover {
+  background: #333;
+}
+
+body.teams-theme-dark .chat-message {
+  background: #2a2a2a;
+}
+
+body.teams-theme-dark .chat-message.own {
+  background: #333;
+}
+
+body.teams-theme-dark .chat-author {
+  color: #aaa;
+}
+
+body.teams-theme-dark .chat-empty,
+body.teams-theme-dark .chat-readonly {
+  color: #888;
+}
+
+body.teams-theme-dark .chat-input-area {
+  border-color: #444;
+}
+
+body.teams-theme-dark .chat-input {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .purchase-complete-note {
+  color: #888;
+}
+
+body.teams-theme-dark .auth-form-lead,
+body.teams-theme-dark .auth-form-footer {
+  color: #bbb;
+}
+
+body.teams-theme-dark .auth-footer-link {
+  color: var(--brand-teal);
 }
