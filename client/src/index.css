@@ -2081,7 +2081,19 @@ textarea.input {
 }
 
 /* Teams dark theme — full surface (meeting side panel forces this when theme is default). */
+/*
+ * Teams can inject CSS variables on :root inside the iframe (e.g. --dark, --gray-*), which
+ * overrides our palette and produces "light background + light text" in the side panel.
+ * Scope a stable dark palette to the app body so it wins over host :root overrides.
+ */
 body.teams-theme-dark {
+  --dark: #f5f5f5;
+  --white: #1f1f1f;
+  --gray-100: #2a2a2a;
+  --gray-200: #444444;
+  --gray-300: #555555;
+  --gray-400: #999999;
+  --gray-600: #cccccc;
   background: #1f1f1f;
   color: #f5f5f5;
 }
@@ -2089,6 +2101,16 @@ body.teams-theme-dark {
 body.teams-theme-dark .app {
   background: #1f1f1f;
   color: #f5f5f5;
+}
+
+body.teams-theme-dark .app-content {
+  background: #1f1f1f;
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark #root {
+  background: #1f1f1f;
+  min-height: 100%;
 }
 
 body.teams-theme-dark .teams-context-banner {
@@ -2099,6 +2121,14 @@ body.teams-theme-dark .teams-context-banner {
 
 body.teams-theme-dark .app-header {
   border-color: #444;
+}
+
+body.teams-theme-dark .app-title {
+  color: #f5f5f5;
+}
+
+body.teams-theme-dark .section-header h3 {
+  color: #f5f5f5;
 }
 
 body.teams-theme-dark .section-label,
