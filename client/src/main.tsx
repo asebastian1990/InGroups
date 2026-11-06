@@ -11,9 +11,13 @@ import {
   isTeamsLegalRoute,
   legalDocumentFromPath,
 } from './legal/legalDocuments.ts';
-import { restoreTeamsThemeSnapshot } from './teams/teamsThemePersist.ts';
+import {
+  applyTeamsThemePreviewFromQuery,
+  restoreTeamsThemeSnapshot,
+} from './teams/teamsThemePersist.ts';
 
 restoreTeamsThemeSnapshot();
+applyTeamsThemePreviewFromQuery();
 
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const isTeamsConfig = path === '/teams/config';

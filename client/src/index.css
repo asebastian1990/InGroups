@@ -2082,9 +2082,12 @@ textarea.input {
 
 /* Teams dark theme — full surface (meeting side panel forces this when theme is default). */
 /*
- * Teams can inject CSS variables on :root inside the iframe (e.g. --dark, --gray-*), which
- * overrides our palette and produces "light background + light text" in the side panel.
- * Scope a stable dark palette to the app body so it wins over host :root overrides.
+ * Two host failures show up as light text on a white panel:
+ * 1) Teams rewrites our CSS variables on :root (--dark, --gray-*, etc.).
+ * 2) Teams sets background / background-color with !important or an inline style,
+ *    which beats a normal #1f1f1f rule while our color rules still apply.
+ * Variables are redefined on body so descendants win over :root.
+ * Surfaces use !important so they win over a host background override.
  */
 body.teams-theme-dark {
   --dark: #f5f5f5;
@@ -2094,22 +2097,20 @@ body.teams-theme-dark {
   --gray-300: #555555;
   --gray-400: #999999;
   --gray-600: #cccccc;
-  background: #1f1f1f;
-  color: #f5f5f5;
+  background: #1f1f1f !important;
+  background-color: #1f1f1f !important;
+  color: #f5f5f5 !important;
 }
 
-body.teams-theme-dark .app {
-  background: #1f1f1f;
-  color: #f5f5f5;
-}
-
-body.teams-theme-dark .app-content {
-  background: #1f1f1f;
-  color: #f5f5f5;
+body.teams-theme-dark .app,
+body.teams-theme-dark .app-content,
+body.teams-theme-dark #root {
+  background: #1f1f1f !important;
+  background-color: #1f1f1f !important;
+  color: #f5f5f5 !important;
 }
 
 body.teams-theme-dark #root {
-  background: #1f1f1f;
   min-height: 100%;
 }
 
@@ -2120,11 +2121,14 @@ body.teams-theme-dark .teams-context-banner {
 }
 
 body.teams-theme-dark .app-header {
+  background: #1f1f1f !important;
+  background-color: #1f1f1f !important;
+  color: #f5f5f5 !important;
   border-color: #444;
 }
 
 body.teams-theme-dark .app-title {
-  color: #f5f5f5;
+  color: #f5f5f5 !important;
 }
 
 body.teams-theme-dark .section-header h3 {
@@ -2145,7 +2149,9 @@ body.teams-theme-dark .section-header {
 
 body.teams-theme-dark .menu-item {
   border-color: #444;
-  color: #f5f5f5;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #f5f5f5 !important;
 }
 
 body.teams-theme-dark .menu-item:hover {
@@ -2162,18 +2168,21 @@ body.teams-theme-dark .menu-item-outlined {
 }
 
 body.teams-theme-dark .btn {
-  background: #2a2a2a;
-  color: #f5f5f5;
+  background: #2a2a2a !important;
+  background-color: #2a2a2a !important;
+  color: #f5f5f5 !important;
   border-color: #666;
 }
 
 body.teams-theme-dark .btn:hover {
-  background: #333;
+  background: #333 !important;
+  background-color: #333 !important;
 }
 
 body.teams-theme-dark .btn-primary {
-  background: #e8e8e8;
-  color: #1f1f1f;
+  background: #e8e8e8 !important;
+  background-color: #e8e8e8 !important;
+  color: #1f1f1f !important;
   border-color: #e8e8e8;
 }
 
@@ -2229,17 +2238,18 @@ body.teams-theme-dark .number-input button:hover {
 }
 
 body.teams-theme-dark .room-code-banner {
-  background: #2a2a2a;
+  background: #2a2a2a !important;
+  background-color: #2a2a2a !important;
   border-color: #444;
 }
 
 body.teams-theme-dark .room-code-label {
-  color: #aaa;
+  color: #aaa !important;
 }
 
 body.teams-theme-dark .room-code-value,
 body.teams-theme-dark .room-code-display {
-  color: #f5f5f5;
+  color: #f5f5f5 !important;
 }
 
 body.teams-theme-dark .win-condition-readonly,
